@@ -210,7 +210,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
         profile_file = File.join(dir, "my_profile.rb")
         File.write(profile_file, "RSpec::Sunspot::Profiles.define(:auto_loaded, data: { records: [{ id: 99 }] })")
 
-        described_class.configure { |c| c.profiles_path = dir }
+        described_class.configuration.profiles_path = dir
 
         config = Object.new
         config.define_singleton_method(:include) { |_mod| nil }
@@ -226,7 +226,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
     end
 
     it "skips auto-loading when profiles_path is nil" do
-      described_class.configure { |c| c.profiles_path = nil }
+      described_class.configuration.profiles_path = nil
 
       config = Object.new
       config.define_singleton_method(:include) { |_mod| nil }
@@ -237,7 +237,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
     end
 
     it "skips auto-loading when profiles_path directory does not exist" do
-      described_class.configure { |c| c.profiles_path = "nonexistent/path/to/profiles" }
+      described_class.configuration.profiles_path = "nonexistent/path/to/profiles"
 
       config = Object.new
       config.define_singleton_method(:include) { |_mod| nil }
