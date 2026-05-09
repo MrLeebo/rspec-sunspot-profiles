@@ -58,7 +58,8 @@ module RSpec
           apply_to(example.metadata, cache_coordinator: cache_coordinator)
         end
 
-        def apply_to(metadata, cache_coordinator: cache)
+        def apply_to(metadata = nil, cache_coordinator: cache, **metadata_keywords)
+          metadata ||= metadata_keywords
           profile_names = requested_profile_names(metadata)
           return metadata if profile_names.empty?
 

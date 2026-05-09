@@ -3,10 +3,10 @@
 RSpec.describe RSpec::Sunspot::Profiles do
   around do |example|
     Dir.mktmpdir("rspec-sunspot-profiles") do |dir|
-      described_class.reset!
-      described_class.cache_root = dir
+      RSpec::Sunspot::Profiles.reset!
+      RSpec::Sunspot::Profiles.cache_root = dir
       example.run
-      described_class.reset!
+      RSpec::Sunspot::Profiles.reset!
     end
   end
 
