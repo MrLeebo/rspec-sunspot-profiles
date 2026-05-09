@@ -1,5 +1,9 @@
 # frozen_string_literal: true
 
+module TeachingTaxonomy
+  TEACHING_RECORD_COUNT = 3_000
+end
+
 RSpec::Sunspot::Profiles.define(
   :articles,
   data: {
@@ -31,7 +35,7 @@ RSpec::Sunspot::Profiles.define(
   }
 )
 
-large_records = Array.new(1_500) do |index|
+large_records = Array.new(TeachingTaxonomy::TEACHING_RECORD_COUNT) do |index|
   {
     id: index + 1,
     title: "Guide #{index + 1}",
@@ -54,7 +58,7 @@ RSpec::Sunspot::Profiles.define(
   },
   dependencies: {
     sunspot: {
-      batch_size: 500
+      batch_size: 1_000
     },
     taxonomy: "teaching-catalog"
   }

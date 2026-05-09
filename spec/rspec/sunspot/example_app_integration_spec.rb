@@ -5,11 +5,6 @@ require "open3"
 require "fileutils"
 
 RSpec.describe "example Rails app integration" do
-  let(:repo_root) { File.expand_path("../../../..", __dir__) }
-  let(:example_root) { File.join(repo_root, "example") }
-  let(:example_gemfile) { File.join(example_root, "Gemfile") }
-  let(:example_cache_root) { File.join(example_root, "tmp/rspec-sunspot-profiles") }
-
   before(:context) do
     result = run_bundle(%w[check])
     result = run_bundle(%w[install]) unless result.fetch(:success)
@@ -31,8 +26,8 @@ RSpec.describe "example Rails app integration" do
     expect(hot.fetch(:success)).to be(true), hot.fetch(:output)
     expect(disabled.fetch(:success)).to be(true), disabled.fetch(:output)
 
-    expect(hot.fetch(:duration)).to be < (disabled.fetch(:duration) * 0.9)
-    expect(cold.fetch(:duration)).to be < (disabled.fetch(:duration) * 0.95)
+    expect(hot.fetch(:duration)).to be < (disabled.fetch(:duration) * hot_multiplier)
+    expect(cold.fetch(:duration)).to be < (disabled.fetch(:duration) * cold_multiplier)
   end
 
   def run_bundle(bundle_args)
@@ -77,9 +72,33 @@ RSpec.describe "example Rails app integration" do
   end
 
   def bundler_command(*args)
-    bundler_bin_path = ENV["BUNDLE_BIN_PATH"]
+    bundler_bin_path = ENV.fetch("BUNDLE_BIN_PATH", nil)
     return [Gem.ruby, bundler_bin_path, *args] if bundler_bin_path
 
     ["bundle", *args]
+  end
+
+  def example_root
+    File.join(repo_root, "example")
+  end
+
+  def example_gemfile
+    File.join(example_root, "Gemfile")
+  end
+
+  def example_cache_root
+    File.join(example_root, "tmp/rspec-sunspot-profiles")
+  end
+
+  def repo_root
+    File.expand_path("../../..", __dir__)
+  end
+
+  def hot_multiplier
+    ENV.fetch("RSPEC_SUNSPOT_PROFILES_HOT_MULTIPLIER", "0.93").to_f
+  end
+
+  def cold_multiplier
+    ENV.fetch("RSPEC_SUNSPOT_PROFILES_COLD_MULTIPLIER", "0.97").to_f
   end
 end

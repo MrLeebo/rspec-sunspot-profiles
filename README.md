@@ -195,6 +195,11 @@ The main gem suite includes an integration spec that:
 - benchmarks cache-disabled runs
 - asserts that cache-enabled runs are measurably faster than cache-disabled runs
 
+If your CI environment is unusually noisy, you can tune the expected speedup thresholds:
+
+- `RSPEC_SUNSPOT_PROFILES_HOT_MULTIPLIER` (default: `0.93`)
+- `RSPEC_SUNSPOT_PROFILES_COLD_MULTIPLIER` (default: `0.97`)
+
 You can also run the example suite directly:
 
 ```bash
