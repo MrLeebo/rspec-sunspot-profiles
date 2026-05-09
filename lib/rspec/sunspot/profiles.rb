@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "profiles/version"
-require_relative "profiles/fingerprint"
-require_relative "profiles/cache_store"
-require_relative "profiles/cache"
+require_relative "profiles/normalization"
 require_relative "profiles/configuration"
 require_relative "profiles/index_capture"
 require_relative "profiles/helpers"
@@ -15,40 +13,7 @@ module RSpec
       class Error < StandardError; end
 
       class << self
-        attr_writer :cache_bust, :configuration
-
-        def cache_root=(value)
-          configuration.cache_root = value
-        end
-
-        def cache_disabled=(value)
-          configuration.cache_disabled = value
-        end
-
-        def cache_root
-          configuration.cache_root
-        end
-
-        def cache_disabled?
-          configuration.cache_disabled == true
-        end
-
-        def cache_bust?
-          @cache_bust == true
-        end
-
-        def cache_store(root: cache_root)
-          CacheStore.new(root: root)
-        end
-
-        def cache(root: cache_root, disabled: cache_disabled?, bust_cache: cache_bust?, env: ENV)
-          Cache.new(
-            store: cache_store(root: root),
-            disabled: disabled,
-            bust_cache: bust_cache,
-            env: env
-          )
-        end
+        attr_writer :configuration
 
         def configuration
           @configuration ||= Configuration.new
@@ -59,18 +24,19 @@ module RSpec
           install!
         end
 
-        def define(name, data: nil, dependencies: {}, &)
+        def define(name, data: nil, dependencies: nil, &)
           configuration.define(name, data: data, dependencies: dependencies, &)
         end
 
         alias register define
         alias profile define
 
-        def apply!(example, cache_coordinator: cache)
-          apply_to(example.metadata, cache_coordinator: cache_coordinator)
+        def apply!(example, **)
+          apply_to(example.metadata, **)
         end
 
-        def apply_to(metadata = nil, cache_coordinator: cache, **metadata_keywords)
+        def apply_to(metadata = nil, cache_coordinator: nil, **metadata_keywords)
+          _cache_coordinator = cache_coordinator
           metadata ||= metadata_keywords
           profile_names = requested_profile_names(metadata)
           return metadata if profile_names.empty?
@@ -80,15 +46,12 @@ module RSpec
 
           profile_names.each do |profile_name|
             profile = configuration.fetch(profile_name)
-            cache_result = fetch_profile(profile, cache_coordinator: cache_coordinator)
+            profile_data = fetch_profile(profile)
 
-            merged_data = deep_merge(merged_data, cache_result.value)
+            merged_data = deep_merge(merged_data, profile_data)
             results[profile.name] = {
-              "hit" => cache_result.hit?,
-              "fingerprint" => cache_result.fingerprint,
-              "miss_reason" => cache_result.miss_reason,
-              "cache" => cache_result.status.to_h,
-              "data" => cache_result.value
+              "type" => profile.executable? ? "executable" : "static",
+              "data" => profile_data
             }
           end
 
@@ -96,17 +59,6 @@ module RSpec
           metadata[configuration.data_key] = merged_data
           metadata[configuration.results_key] = results
           metadata
-        end
-
-        def cache_status(profile_name, cache_coordinator: cache)
-          profile = configuration.fetch(profile_name)
-          return executable_cache_status(profile) if profile.executable?
-
-          cache_coordinator.status(
-            profile_name: profile.name,
-            profile_definition: profile.fingerprint_definition,
-            dependencies: profile.normalized_dependencies
-          ).to_h
         end
 
         def install!(rspec_config = ::RSpec.configuration)
@@ -132,55 +84,16 @@ module RSpec
 
         def reset!
           @configuration = Configuration.new
-          @cache_bust = nil
         end
 
         private
 
-        def fetch_profile(profile, cache_coordinator:)
+        def fetch_profile(profile)
           if profile.executable?
-            fingerprint = Fingerprint.generate(
-              profile_name: profile.name,
-              profile_definition: profile.fingerprint_definition,
-              dependencies: profile.normalized_dependencies
-            ).fingerprint
-
-            return Cache::Result.new(
-              hit?: false,
-              value: IndexCapture.new.evaluate(&profile.block),
-              metadata: nil,
-              fingerprint: fingerprint,
-              miss_reason: "executable_profile",
-              status: Cache::Status.new(
-                profile_name: profile.name,
-                fingerprint: fingerprint,
-                hit?: false,
-                miss_reason: "executable_profile",
-                cache_enabled: false,
-                bust_cache: false,
-                entry_path: nil,
-                artifact_path: nil,
-                artifact_exists: false,
-                metadata_path: nil,
-                metadata_exists: false,
-                metadata: nil
-              )
-            )
+            IndexCapture.new.evaluate(&profile.block)
+          else
+            profile.normalized_data
           end
-
-          cache_coordinator.fetch(
-            profile_name: profile.name,
-            profile_definition: profile.fingerprint_definition,
-            dependencies: profile.normalized_dependencies,
-            restore: lambda { |artifact_path, _metadata|
-              JSON.parse(File.read(artifact_path))
-            },
-            build: lambda { |artifact_path, _payload|
-              data = profile.normalized_data
-              File.write(artifact_path, "#{JSON.pretty_generate(data)}\n")
-              data
-            }
-          )
         end
 
         def requested_profile_names(metadata)
@@ -197,30 +110,7 @@ module RSpec
         def initial_profile_data(metadata)
           return {} unless metadata.key?(configuration.data_key)
 
-          Fingerprint.normalize_payload(metadata[configuration.data_key])
-        end
-
-        def executable_cache_status(profile)
-          fingerprint = Fingerprint.generate(
-            profile_name: profile.name,
-            profile_definition: profile.fingerprint_definition,
-            dependencies: profile.normalized_dependencies
-          ).fingerprint
-
-          Cache::Status.new(
-            profile_name: profile.name,
-            fingerprint: fingerprint,
-            hit?: false,
-            miss_reason: "executable_profile",
-            cache_enabled: false,
-            bust_cache: false,
-            entry_path: nil,
-            artifact_path: nil,
-            artifact_exists: false,
-            metadata_path: nil,
-            metadata_exists: false,
-            metadata: nil
-          ).to_h
+          Normalization.normalize_payload(metadata[configuration.data_key])
         end
 
         def deep_merge(left, right)

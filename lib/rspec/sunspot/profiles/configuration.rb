@@ -1,45 +1,23 @@
 # frozen_string_literal: true
 
-require "digest"
-
 module RSpec
   module Sunspot
     module Profiles
       class Configuration
-        Profile = Struct.new(:name, :data, :dependencies, :block, keyword_init: true) do
+        Profile = Struct.new(:name, :data, :block, keyword_init: true) do
           def executable?
             !block.nil?
           end
 
           def normalized_data
-            Fingerprint.normalize_payload(data || {})
-          end
-
-          def normalized_dependencies
-            Fingerprint.normalize_payload(dependencies || {})
-          end
-
-          def fingerprint_definition
-            return normalized_data unless executable?
-
-            file, line = block.source_location
-            payload = {
-              "type" => "block",
-              "source_location" => [file, line]
-            }
-
-            payload["source_digest"] = Digest::SHA256.file(file).hexdigest if file && File.file?(file)
-            payload
+            Normalization.normalize_payload(data || {})
           end
         end
 
-        attr_accessor :profiles_path, :cache_root, :cache_disabled,
-                      :metadata_key, :metadata_collection_key, :data_key, :results_key, :names_key
+        attr_accessor :profiles_path, :metadata_key, :metadata_collection_key, :data_key, :results_key, :names_key
 
         def initialize
           @profiles_path = "spec/data_profiles"
-          @cache_root = File.expand_path("tmp/rspec-sunspot-profiles", Dir.pwd)
-          @cache_disabled = false
           @metadata_key = :sunspot_profile
           @metadata_collection_key = :sunspot_profiles
           @data_key = :sunspot_profile_data
@@ -48,13 +26,13 @@ module RSpec
           @profiles = {}
         end
 
-        def define(name, data: nil, dependencies: {}, &block)
+        def define(name, data: nil, dependencies: nil, &block)
+          _dependencies = dependencies
           validate_definition!(name, data, block)
 
           profile = Profile.new(
             name: name.to_s,
             data: data,
-            dependencies: dependencies,
             block: block
           )
 
