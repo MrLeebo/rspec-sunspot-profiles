@@ -154,11 +154,11 @@ RSpec.describe "example Rails app integration" do
   end
 
   def cold_throughput_floor
-    ENV.fetch("RSPEC_SUNSPOT_PROFILES_COLD_MULTIPLIER", "0.97").to_f
+    ENV.fetch("RSPEC_SUNSPOT_PROFILES_COLD_MULTIPLIER", "1.0").to_f
   end
 
   def benchmark_window_seconds
-    ENV.fetch("RSPEC_SUNSPOT_PROFILES_BENCHMARK_SECONDS", "10").to_f
+    ENV.fetch("RSPEC_SUNSPOT_PROFILES_BENCHMARK_SECONDS", "60").to_f
   end
 
   def extract_example_count(output)
