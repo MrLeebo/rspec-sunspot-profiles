@@ -48,12 +48,6 @@ RSpec::Sunspot::Profiles.configure do |config|
   # Default: false
   # config.cache_disabled = false
 
-  # RSpec metadata keys used to attach profiles to examples (rarely need changing).
-  # config.metadata_key = :sunspot_profile
-  # config.metadata_collection_key = :sunspot_profiles
-  # config.data_key = :sunspot_profile_data
-  # config.results_key = :sunspot_profile_results
-  # config.names_key = :sunspot_profile_names
 end
 ```
 
