@@ -27,15 +27,33 @@ bundle install
 
 ## Usage
 
-Load the gem and call `configure` from your RSpec configuration. By default, profile files are automatically loaded from `spec/data_profiles/`:
+Load the gem and call `configure` from your RSpec configuration:
 
 ```ruby
 # spec_helper.rb
 require "rspec/sunspot/profiles"
 
 RSpec::Sunspot::Profiles.configure do |config|
-  # config.profiles_path = "spec/search_fixtures"  # custom path
-  # config.profiles_path = nil                     # disable auto-loading
+  # Directory to auto-load profile files from when configure is called.
+  # Set to nil to disable auto-loading and require profile files manually.
+  # Default: "spec/data_profiles"
+  # config.profiles_path = "spec/data_profiles"
+
+  # Directory where static profile cache artifacts are stored.
+  # Default: "tmp/rspec-sunspot-profiles"
+  # config.cache_root = "tmp/rspec-sunspot-profiles"
+
+  # Set to true to hard-disable caching for all profiles.
+  # The RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE environment variable also works as a per-run override.
+  # Default: false
+  # config.cache_disabled = false
+
+  # RSpec metadata keys used to attach profiles to examples (rarely need changing).
+  # config.metadata_key = :sunspot_profile
+  # config.metadata_collection_key = :sunspot_profiles
+  # config.data_key = :sunspot_profile_data
+  # config.results_key = :sunspot_profile_results
+  # config.names_key = :sunspot_profile_names
 end
 ```
 
