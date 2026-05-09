@@ -27,4 +27,6 @@ Gem::Specification.new do |spec|
   spec.bindir = "exe"
   spec.executables = []
   spec.require_paths = ["lib"]
+
+  spec.add_dependency "rspec-core", ">= 3.13", "< 4"
 end

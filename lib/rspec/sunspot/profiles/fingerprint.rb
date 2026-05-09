@@ -17,8 +17,8 @@ module RSpec
                        cache_format_version: CACHE_FORMAT_VERSION)
             payload = {
               "profile_name" => profile_name.to_s,
-              "profile_definition" => normalize(profile_definition),
-              "dependencies" => normalize(dependencies),
+              "profile_definition" => normalize_payload(profile_definition),
+              "dependencies" => normalize_payload(dependencies),
               "gem_version" => gem_version.to_s,
               "cache_format_version" => cache_format_version
             }
@@ -27,6 +27,10 @@ module RSpec
               fingerprint: Digest::SHA256.hexdigest(JSON.generate(payload)),
               payload: payload
             )
+          end
+
+          def normalize_payload(value)
+            normalize(value)
           end
 
           private
