@@ -1,24 +1,43 @@
-# README
+# Example Rails app
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This Rails app demonstrates how to use `rspec-sunspot-profiles` through a local path dependency.
 
-Things you may want to cover:
+## What it covers
 
-* Ruby version
+- static profiles loaded from `spec/data_profiles`
+- executable benchmark profiles that always run
+- merged metadata access through `sunspot_profile_names`, `sunspot_profile_data`, and `sunspot_profile_results`
+- cache benchmarking against cache-disabled runs
 
-* System dependencies
+## Run the example suite
 
-* Configuration
+From this directory:
 
-* Database creation
+```bash
+bundle install
+bundle exec rspec
+```
 
-* Database initialization
+## Files to look at
 
-* How to run the test suite
+- `spec/support/rspec_sunspot_profiles.rb` — gem configuration for the example app
+- `spec/data_profiles/teaching_taxonomy.rb` — sample static and executable profiles
+- `spec/sunspot/profile_metadata_spec.rb` — metadata usage examples
+- `spec/sunspot/cache_benchmark_shape_spec.rb` — cache benchmark workload shape
 
-* Services (job queues, cache servers, search engines, etc.)
+## Cache troubleshooting
 
-* Deployment instructions
+Applied profiles expose cache diagnostics through `sunspot_profile_results`. For example:
 
-* ...
+```ruby
+result = sunspot_profile_results.fetch("articles")
+result["hit"]
+result["miss_reason"]
+result["cache"]
+```
+
+You can also inspect a profile outside an example:
+
+```ruby
+RSpec::Sunspot::Profiles.cache_status(:articles)
+```

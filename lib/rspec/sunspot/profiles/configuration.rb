@@ -58,6 +58,8 @@ module RSpec
             block: block
           )
 
+          raise Error, "sunspot profile already registered: #{profile.name}" if @profiles.key?(profile.name)
+
           @profiles[profile.name] = profile
         end
 

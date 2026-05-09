@@ -79,7 +79,7 @@ profile :minimal do
 end
 ```
 
-Static payload profiles are still supported when you want deterministic cached artifacts instead of executable setup:
+Use executable profiles when the setup needs to run for the current example. Use static payload profiles when you want deterministic cached artifacts that can be restored across runs:
 
 ```ruby
 RSpec::Sunspot::Profiles.define(
@@ -131,6 +131,8 @@ Each cache entry stores:
 
 By default, cache data is stored under `tmp/rspec-sunspot-profiles` (configurable via `config.cache_root`).
 
+Profile names must be unique. Registering the same name twice now raises `RSpec::Sunspot::Profiles::Error` so duplicate auto-loaded files fail fast instead of silently overwriting each other.
+
 ## Configuration
 
 Use `RSpec::Sunspot::Profiles.configure` to set project-level options:
@@ -164,6 +166,43 @@ Use these environment variables for one-off, per-run overrides:
 - `RSPEC_SUNSPOT_PROFILES_CACHE_BUST=1` — force a rebuild and refresh the stored cache metadata
 
 For a stable project-level setting (e.g., always disabled in CI), prefer `config.cache_disabled = true` in the configure block instead.
+
+## Cache troubleshooting
+
+Each applied profile result includes cache diagnostics in `sunspot_profile_results`:
+
+```ruby
+it "shows why a cache missed", sunspot_profile: :articles do
+  result = sunspot_profile_results.fetch("articles")
+
+  result["hit"]         # => false
+  result["miss_reason"] # => "missing_metadata", "fingerprint_changed", etc.
+  result["cache"]       # => entry/artifact/metadata paths plus any previous metadata
+end
+```
+
+You can also inspect a registered profile directly:
+
+```ruby
+RSpec::Sunspot::Profiles.cache_status(:articles)
+# {
+#   "profile_name" => "articles",
+#   "hit" => false,
+#   "miss_reason" => "missing_metadata",
+#   "entry_path" => ".../tmp/rspec-sunspot-profiles/articles",
+#   "artifact_path" => ".../artifact",
+#   "metadata_path" => ".../metadata.json"
+# }
+```
+
+Possible `miss_reason` values are:
+
+- `missing_metadata` — the cache entry has not been written yet
+- `missing_artifact` — metadata exists but the artifact file is missing
+- `fingerprint_changed` — the stored fingerprint no longer matches the current profile inputs
+- `cache_disabled` — caching was disabled by configuration or environment
+- `cache_busted` — the run forced a rebuild with `RSPEC_SUNSPOT_PROFILES_CACHE_BUST`
+- `executable_profile` — executable profiles always run and are never restored from cache
 
 ## Development
 

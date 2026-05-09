@@ -32,6 +32,11 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(metadata[:sunspot_profile_results]).to include(
         "articles" => include(
           "hit" => false,
+          "miss_reason" => "missing_metadata",
+          "cache" => include(
+            "miss_reason" => "missing_metadata",
+            "cache_enabled" => true
+          ),
           "data" => metadata[:sunspot_profile_data]
         )
       )
@@ -95,6 +100,8 @@ RSpec.describe RSpec::Sunspot::Profiles do
         ]
       )
       expect(metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
+      expect(metadata.dig(:sunspot_profile_results, "minimal", "miss_reason")).to eq("executable_profile")
+      expect(metadata.dig(:sunspot_profile_results, "minimal", "cache", "cache_enabled")).to be(false)
     end
 
     it "captures records indexed by executable profiles without any factory helper" do
@@ -156,6 +163,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(second_metadata[:sunspot_profile_data]).to eq(
         "records" => [{ "class" => "Individual", "id" => 11 }]
       )
+      expect(second_metadata.dig(:sunspot_profile_results, "minimal", "miss_reason")).to eq("executable_profile")
     end
 
     it "raises when an example references an unknown profile" do
@@ -247,6 +255,34 @@ RSpec.describe RSpec::Sunspot::Profiles do
     end
   end
 
+  describe ".cache_status" do
+    it "returns cache troubleshooting details for static profiles" do
+      described_class.define(:articles, data: { records: [{ id: 1 }] })
+
+      status = described_class.cache_status(:articles)
+
+      expect(status).to include(
+        "profile_name" => "articles",
+        "hit" => false,
+        "miss_reason" => "missing_metadata",
+        "cache_enabled" => true
+      )
+    end
+
+    it "reports executable profiles as always uncached" do
+      described_class.profile(:minimal) { :ok }
+
+      status = described_class.cache_status(:minimal)
+
+      expect(status).to include(
+        "profile_name" => "minimal",
+        "hit" => false,
+        "miss_reason" => "executable_profile",
+        "cache_enabled" => false
+      )
+    end
+  end
+
   describe ".configure" do
     it "automatically calls install! after the block" do
       allow(described_class).to receive(:install!)
@@ -278,6 +314,33 @@ RSpec.describe RSpec::Sunspot::Profiles do
 
       expect(first_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(false)
       expect(second_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(false)
+    end
+  end
+
+  describe "duplicate profile registration" do
+    it "raises when the same profile name is registered twice" do
+      described_class.define(:articles, data: { records: [{ id: 1 }] })
+
+      expect do
+        described_class.define(:articles, data: { records: [{ id: 2 }] })
+      end.to raise_error(RSpec::Sunspot::Profiles::Error, "sunspot profile already registered: articles")
+    end
+
+    it "raises when auto-loaded files define the same profile twice" do
+      Dir.mktmpdir("rspec-sunspot-profiles-duplicates") do |dir|
+        File.write(File.join(dir, "first.rb"), "profile :duplicate, data: { records: [{ id: 1 }] }\n")
+        File.write(File.join(dir, "second.rb"), "profile :duplicate, data: { records: [{ id: 2 }] }\n")
+
+        described_class.configuration.profiles_path = dir
+
+        config = Object.new
+        config.define_singleton_method(:include) { |_mod| nil }
+        config.define_singleton_method(:around) { |&_block| nil }
+
+        expect do
+          described_class.install!(config)
+        end.to raise_error(RSpec::Sunspot::Profiles::Error, "sunspot profile already registered: duplicate")
+      end
     end
   end
 

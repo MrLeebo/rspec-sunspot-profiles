@@ -46,6 +46,14 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
         "sunspot" => { "batch_size" => 100 }
       }
     )
+    expect(result.miss_reason).to eq("missing_metadata")
+    expect(result.status.to_h).to include(
+      "profile_name" => profile_name,
+      "hit" => false,
+      "miss_reason" => "missing_metadata",
+      "artifact_exists" => false,
+      "metadata_exists" => false
+    )
   end
 
   it "restores the cached artifact when the fingerprint matches" do
@@ -76,6 +84,12 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
     expect(result.hit?).to be(true)
     expect(result.value).to start_with("cached artifact:")
     expect(build_calls).to eq(0)
+    expect(result.status.to_h).to include(
+      "hit" => true,
+      "miss_reason" => nil,
+      "metadata_exists" => true,
+      "artifact_exists" => true
+    )
   end
 
   it "rebuilds when the profile definition changes" do
@@ -104,6 +118,14 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
     expect(second_result.value).to eq(:rebuilt)
     expect(second_result.fingerprint).not_to eq(first_result.fingerprint)
     expect(File.read(store.artifact_path(profile_name: profile_name))).to eq("second artifact")
+    expect(second_result.miss_reason).to eq("fingerprint_changed")
+    expect(second_result.status.to_h).to include(
+      "miss_reason" => "fingerprint_changed",
+      "metadata_exists" => true,
+      "artifact_exists" => true,
+      "existing_fingerprint" => first_result.fingerprint,
+      "fingerprint_matches" => false
+    )
   end
 
   it "rebuilds when the cache format version changes" do
@@ -162,6 +184,7 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
     expect(result.hit?).to be(false)
     expect(result.value).to eq(:rebuilt)
     expect(File.read(store.artifact_path(profile_name: profile_name))).to eq("rebuilt after bust")
+    expect(result.miss_reason).to eq("cache_busted")
   end
 
   it "skips metadata writes when caching is disabled" do
@@ -181,5 +204,27 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
     expect(result.hit?).to be(false)
     expect(result.metadata).to be_nil
     expect(File).not_to exist(store.metadata_path(profile_name: profile_name))
+    expect(result.miss_reason).to eq("cache_disabled")
+    expect(result.status.to_h).to include(
+      "cache_enabled" => false,
+      "miss_reason" => "cache_disabled"
+    )
+  end
+
+  it "reports cache status for troubleshooting without fetching" do
+    status = cache.status(
+      profile_name: profile_name,
+      profile_definition: profile_definition,
+      dependencies: dependencies
+    )
+
+    expect(status.to_h).to include(
+      "profile_name" => profile_name,
+      "hit" => false,
+      "miss_reason" => "missing_metadata",
+      "entry_path" => store.entry_path(profile_name: profile_name),
+      "artifact_path" => store.artifact_path(profile_name: profile_name),
+      "metadata_path" => store.metadata_path(profile_name: profile_name)
+    )
   end
 end

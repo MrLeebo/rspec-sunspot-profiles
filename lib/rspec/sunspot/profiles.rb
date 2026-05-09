@@ -86,6 +86,8 @@ module RSpec
             results[profile.name] = {
               "hit" => cache_result.hit?,
               "fingerprint" => cache_result.fingerprint,
+              "miss_reason" => cache_result.miss_reason,
+              "cache" => cache_result.status.to_h,
               "data" => cache_result.value
             }
           end
@@ -94,6 +96,17 @@ module RSpec
           metadata[configuration.data_key] = merged_data
           metadata[configuration.results_key] = results
           metadata
+        end
+
+        def cache_status(profile_name, cache_coordinator: cache)
+          profile = configuration.fetch(profile_name)
+          return executable_cache_status(profile) if profile.executable?
+
+          cache_coordinator.status(
+            profile_name: profile.name,
+            profile_definition: profile.fingerprint_definition,
+            dependencies: profile.normalized_dependencies
+          ).to_h
         end
 
         def install!(rspec_config = ::RSpec.configuration)
@@ -126,15 +139,32 @@ module RSpec
 
         def fetch_profile(profile, cache_coordinator:)
           if profile.executable?
+            fingerprint = Fingerprint.generate(
+              profile_name: profile.name,
+              profile_definition: profile.fingerprint_definition,
+              dependencies: profile.normalized_dependencies
+            ).fingerprint
+
             return Cache::Result.new(
               hit?: false,
               value: IndexCapture.new.evaluate(&profile.block),
               metadata: nil,
-              fingerprint: Fingerprint.generate(
+              fingerprint: fingerprint,
+              miss_reason: "executable_profile",
+              status: Cache::Status.new(
                 profile_name: profile.name,
-                profile_definition: profile.fingerprint_definition,
-                dependencies: profile.normalized_dependencies
-              ).fingerprint
+                fingerprint: fingerprint,
+                hit?: false,
+                miss_reason: "executable_profile",
+                cache_enabled: false,
+                bust_cache: false,
+                entry_path: nil,
+                artifact_path: nil,
+                artifact_exists: false,
+                metadata_path: nil,
+                metadata_exists: false,
+                metadata: nil
+              )
             )
           end
 
@@ -168,6 +198,29 @@ module RSpec
           return {} unless metadata.key?(configuration.data_key)
 
           Fingerprint.normalize_payload(metadata[configuration.data_key])
+        end
+
+        def executable_cache_status(profile)
+          fingerprint = Fingerprint.generate(
+            profile_name: profile.name,
+            profile_definition: profile.fingerprint_definition,
+            dependencies: profile.normalized_dependencies
+          ).fingerprint
+
+          Cache::Status.new(
+            profile_name: profile.name,
+            fingerprint: fingerprint,
+            hit?: false,
+            miss_reason: "executable_profile",
+            cache_enabled: false,
+            bust_cache: false,
+            entry_path: nil,
+            artifact_path: nil,
+            artifact_exists: false,
+            metadata_path: nil,
+            metadata_exists: false,
+            metadata: nil
+          ).to_h
         end
 
         def deep_merge(left, right)
