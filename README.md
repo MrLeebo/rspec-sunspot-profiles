@@ -183,6 +183,26 @@ bundle exec rubocop
 bundle exec rspec
 ```
 
+## Example Rails app and cache benchmarking
+
+This repository now includes an `example/` Rails application that demonstrates a Sunspot profile taxonomy (`articles`, `comments`, and a larger teaching catalog profile) using this gem via a local path dependency.
+
+The main gem suite includes an integration spec that:
+
+- installs and runs the example app spec suite
+- benchmarks cache-enabled runs with a cold cache
+- benchmarks cache-enabled runs with a hot cache
+- benchmarks cache-disabled runs
+- asserts that cache-enabled runs are measurably faster than cache-disabled runs
+
+You can also run the example suite directly:
+
+```bash
+cd example
+bundle install
+bundle exec rspec
+```
+
 ## Publishing
 
 The repository includes GitHub Actions workflows for CI, RuboCop, and RubyGems publishing. Releases are published through the `publish.yml` workflow on version tags matching `v*` or by manual dispatch.

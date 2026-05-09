@@ -3,6 +3,7 @@ AllCops:
   TargetRubyVersion: 3.2
   Exclude:
     - vendor/**/*
+    - example/**/*
 
 Layout/LineLength:
   Max: 120
