@@ -27,34 +27,56 @@ bundle install
 
 ## Usage
 
-Register profiles in your RSpec setup:
+Load profile files from your RSpec setup:
 
 ```ruby
-RSpec::Sunspot::Profiles.configure do |config|
-  config.define(
-    :articles,
-    data: {
-      records: [
-        { id: 1, title: "First article" }
-      ],
-      search: {
-        commit: true
-      }
-    },
-    dependencies: {
-      solr_url: "http://localhost:8983/solr/test"
-    }
-  )
+Dir[File.expand_path("data_profiles/**/*.rb", __dir__)].sort.each do |path|
+  require path
 end
+```
+
+Define an executable profile with FactoryBot-style setup:
+
+```ruby
+# spec/data_profiles/minimal.rb
+
+profile :minimal do
+  FactoryBot :individual, :new_account
+  FactoryBot :job, :listed_today
+  data search: { commit: true }
+end
+```
+
+The `FactoryBot` helper delegates to `FactoryBot.create(...)`, records the created model references under `records`, and lets the block merge any extra metadata with `data`.
+
+Static payload profiles are still supported when you want deterministic cached artifacts instead of executable setup:
+
+```ruby
+RSpec::Sunspot::Profiles.define(
+  :articles,
+  data: {
+    records: [
+      { id: 1, title: "First article" }
+    ],
+    search: {
+      commit: true
+    }
+  },
+  dependencies: {
+    solr_url: "http://localhost:8983/solr/test"
+  }
+)
 ```
 
 Apply a profile in example metadata:
 
 ```ruby
-RSpec.describe "searching", sunspot_profile: :articles do
+RSpec.describe "searching", sunspot_profile: :minimal do
   it "uses the configured profile" do
-    expect(sunspot_profile_names).to eq(["articles"])
-    expect(sunspot_profile_data["records"].first["title"]).to eq("First article")
+    expect(sunspot_profile_names).to eq(["minimal"])
+    expect(sunspot_profile_data["records"]).to include(
+      include("class" => "Individual")
+    )
   end
 end
 ```
@@ -76,7 +98,9 @@ It also exposes the processed values through both example metadata and helper me
 
 ## Caching
 
-Profile cache entries are keyed by a deterministic fingerprint built from the profile name, normalized profile data, declared dependencies, the gem version, and an internal cache format version. If those inputs do not change, the gem can restore the cached artifact from disk instead of rebuilding it.
+Static profile cache entries are keyed by a deterministic fingerprint built from the profile name, normalized profile data, declared dependencies, the gem version, and an internal cache format version. If those inputs do not change, the gem can restore the cached artifact from disk instead of rebuilding it.
+
+Executable block-based profiles always run when requested so their setup side effects happen for the current example.
 
 Each cache entry stores:
 

@@ -65,10 +65,73 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(second_metadata[:sunspot_profile_data]).to eq(first_metadata[:sunspot_profile_data])
     end
 
+    it "supports executable profiles defined with the profile DSL" do
+      stub_const("Individual", Struct.new(:id))
+      stub_const("Job", Struct.new(:id))
+      stub_const("FactoryBot", Module.new)
+
+      created_records = [Individual.new(10), Job.new(20)]
+      allow(FactoryBot).to receive(:create) { created_records.shift }
+
+      Object.new.instance_eval do
+        profile :minimal do
+          FactoryBot :individual, :new_account
+          FactoryBot :job, :listed_today
+          data search: { commit: true }
+        end
+      end
+
+      metadata = { sunspot_profile: :minimal }
+
+      described_class.apply_to(metadata)
+
+      expect(FactoryBot).to have_received(:create).with(:individual, :new_account).once
+      expect(FactoryBot).to have_received(:create).with(:job, :listed_today).once
+      expect(metadata[:sunspot_profile_data]).to eq(
+        "records" => [
+          { "class" => "Individual", "id" => 10 },
+          { "class" => "Job", "id" => 20 }
+        ],
+        "search" => { "commit" => true }
+      )
+      expect(metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
+    end
+
+    it "does not restore executable profiles from the cache" do
+      stub_const("Individual", Struct.new(:id))
+      stub_const("FactoryBot", Module.new)
+
+      allow(FactoryBot).to receive(:create).and_return(Individual.new(10), Individual.new(11))
+
+      described_class.profile(:minimal) do
+        FactoryBot :individual
+      end
+
+      first_metadata = { sunspot_profile: :minimal }
+      second_metadata = { sunspot_profile: :minimal }
+
+      described_class.apply_to(first_metadata)
+      described_class.apply_to(second_metadata)
+
+      expect(first_metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
+      expect(second_metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
+      expect(FactoryBot).to have_received(:create).twice
+    end
+
     it "raises when an example references an unknown profile" do
       expect do
         described_class.apply_to(sunspot_profile: :missing)
       end.to raise_error(RSpec::Sunspot::Profiles::Error, "unknown sunspot profile: missing")
+    end
+
+    it "raises when executable profiles use FactoryBot without the gem being loaded" do
+      described_class.profile(:minimal) do
+        FactoryBot :individual
+      end
+
+      expect do
+        described_class.apply_to(sunspot_profile: :minimal)
+      end.to raise_error(RSpec::Sunspot::Profiles::Error, "FactoryBot is not defined")
     end
   end
 

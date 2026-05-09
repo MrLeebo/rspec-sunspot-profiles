@@ -5,7 +5,9 @@ require_relative "profiles/fingerprint"
 require_relative "profiles/cache_store"
 require_relative "profiles/cache"
 require_relative "profiles/configuration"
+require_relative "profiles/execution_context"
 require_relative "profiles/helpers"
+require_relative "profiles/dsl"
 
 module RSpec
   module Sunspot
@@ -48,11 +50,12 @@ module RSpec
           yield(configuration)
         end
 
-        def define(name, data:, dependencies: {})
-          configuration.define(name, data: data, dependencies: dependencies)
+        def define(name, data: nil, dependencies: {}, &block)
+          configuration.define(name, data: data, dependencies: dependencies, &block)
         end
 
         alias register define
+        alias profile define
 
         def apply!(example, cache_coordinator: cache)
           apply_to(example.metadata, cache_coordinator: cache_coordinator)
@@ -110,9 +113,22 @@ module RSpec
         private
 
         def fetch_profile(profile, cache_coordinator:)
+          if profile.executable?
+            return Cache::Result.new(
+              hit?: false,
+              value: ExecutionContext.new.evaluate(&profile.block),
+              metadata: nil,
+              fingerprint: Fingerprint.generate(
+                profile_name: profile.name,
+                profile_definition: profile.fingerprint_definition,
+                dependencies: profile.normalized_dependencies
+              ).fingerprint
+            )
+          end
+
           cache_coordinator.fetch(
             profile_name: profile.name,
-            profile_definition: profile.normalized_data,
+            profile_definition: profile.fingerprint_definition,
             dependencies: profile.normalized_dependencies,
             restore: lambda { |artifact_path, _metadata|
               JSON.parse(File.read(artifact_path))
