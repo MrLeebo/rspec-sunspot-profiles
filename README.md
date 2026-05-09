@@ -1,0 +1,1 @@
+# rspec-sunspot-profiles
