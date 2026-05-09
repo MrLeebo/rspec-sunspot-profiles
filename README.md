@@ -135,5 +135,16 @@ Install dependencies and run specs:
 
 ```bash
 bundle install
+bundle exec rubocop
 bundle exec rspec
 ```
+
+## Publishing
+
+The repository includes:
+
+- `.github/workflows/ci.yml` for the RSpec suite
+- `.github/workflows/rubocop.yml` for linting
+- `.github/workflows/publish.yml` for RubyGems releases
+
+The publish workflow is set up for RubyGems trusted publishing and runs on version tags matching `v*` or manual dispatch.
