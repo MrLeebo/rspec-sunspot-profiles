@@ -9,22 +9,22 @@ module RSpec
           @records = []
         end
 
-        def evaluate(&block)
-          merge_payload(instance_exec(&block))
+        def evaluate(&)
+          merge_payload(instance_exec(&))
+          @data["records"] = deep_merge(@data.fetch("records", []), @records) unless @records.empty?
           @data
         end
 
-        def FactoryBot(name, *traits, **attributes, &block)
-          record = factory_bot(name, *traits, **attributes, &block)
+        def factory_bot(name, *traits, **attributes, &)
+          raise Error, "FactoryBot is not defined" unless defined?(::FactoryBot)
+
+          record = ::FactoryBot.create(name, *traits, **attributes, &)
           @records << serialize_record(record)
           record
         end
-
-        def factory_bot(name, *traits, **attributes, &block)
-          raise Error, "FactoryBot is not defined" unless defined?(::FactoryBot)
-
-          ::FactoryBot.create(name, *traits, **attributes, &block)
-        end
+        # rubocop:disable Naming/MethodName
+        alias FactoryBot factory_bot
+        # rubocop:enable Naming/MethodName
 
         def data(payload = nil, **entries)
           payload = entries if payload.nil? && !entries.empty?
@@ -35,9 +35,9 @@ module RSpec
 
         def merge_payload(payload)
           return @data if payload.nil?
+          return @data unless payload.is_a?(Hash)
 
           @data = deep_merge(@data, Fingerprint.normalize_payload(payload))
-          @data["records"] = deep_merge(@data.fetch("records", []), @records) unless @records.empty?
           @data
         end
 
@@ -68,9 +68,7 @@ module RSpec
 
         def serializable_value?(value)
           case value
-          when NilClass, Numeric, String, TrueClass, FalseClass
-            true
-          when Symbol, Time
+          when NilClass, Numeric, String, TrueClass, FalseClass, Symbol, Time
             true
           when Array
             value.all? { |element| serializable_value?(element) }

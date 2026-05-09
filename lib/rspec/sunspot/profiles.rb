@@ -50,8 +50,8 @@ module RSpec
           yield(configuration)
         end
 
-        def define(name, data: nil, dependencies: {}, &block)
-          configuration.define(name, data: data, dependencies: dependencies, &block)
+        def define(name, data: nil, dependencies: {}, &)
+          configuration.define(name, data: data, dependencies: dependencies, &)
         end
 
         alias register define
