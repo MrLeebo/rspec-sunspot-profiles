@@ -27,10 +27,17 @@ bundle install
 
 ## Usage
 
-Load the gem and call `configure` from your RSpec configuration:
+Load the gem from `spec_helper.rb`:
 
 ```ruby
 # spec_helper.rb
+require "support/rspec-sunspot-profiles"
+```
+
+And configure it in a support file:
+
+```ruby
+# spec/support/rspec-sunspot-profiles.rb
 require "rspec/sunspot/profiles"
 
 RSpec::Sunspot::Profiles.configure do |config|
@@ -47,7 +54,6 @@ RSpec::Sunspot::Profiles.configure do |config|
   # The RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE environment variable also works as a per-run override.
   # Default: false
   # config.cache_disabled = false
-
 end
 ```
 
@@ -138,6 +144,9 @@ By default, cache data is stored under `tmp/rspec-sunspot-profiles` (configurabl
 Use `RSpec::Sunspot::Profiles.configure` to set project-level options:
 
 ```ruby
+# spec/support/rspec-sunspot-profiles.rb
+require "rspec/sunspot/profiles"
+
 RSpec::Sunspot::Profiles.configure do |config|
   # Directory to auto-load profile files from when configure is called.
   # Set to nil to disable auto-loading and require profile files manually.
@@ -152,13 +161,6 @@ RSpec::Sunspot::Profiles.configure do |config|
   # The RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE environment variable also works as a per-run override.
   # Default: false
   config.cache_disabled = false
-
-  # RSpec metadata keys used to attach profiles to examples (rarely need changing).
-  config.metadata_key = :sunspot_profile
-  config.metadata_collection_key = :sunspot_profiles
-  config.data_key = :sunspot_profile_data
-  config.results_key = :sunspot_profile_results
-  config.names_key = :sunspot_profile_names
 end
 ```
 
