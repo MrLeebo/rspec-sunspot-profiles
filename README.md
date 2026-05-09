@@ -39,12 +39,6 @@ RSpec::Sunspot::Profiles.configure do |config|
 end
 ```
 
-`configure` automatically calls `install!` after evaluating the block, so no separate `install!` call is needed. If you have no configuration to set, you can call `install!` directly instead:
-
-```ruby
-RSpec::Sunspot::Profiles.install!
-```
-
 Define an executable profile with ordinary setup code:
 
 ```ruby
