@@ -29,8 +29,9 @@ RSpec.describe "example Rails app integration" do
     expect(hot.fetch(:completed_runs)).to be >= 1
     expect(disabled.fetch(:completed_runs)).to be >= 1
 
-    expect(hot.fetch(:throughput)).to be > (disabled.fetch(:throughput) / hot_multiplier)
-    expect(cold.fetch(:throughput)).to be > (disabled.fetch(:throughput) / cold_multiplier)
+    expect(hot.fetch(:throughput)).to be > (disabled.fetch(:throughput) * hot_multiplier)
+    expect(cold.fetch(:throughput)).to be > (disabled.fetch(:throughput) * cold_multiplier)
+    expect([cold.fetch(:throughput), hot.fetch(:throughput)].max).to be > (disabled.fetch(:throughput) * 1.03)
   end
 
   def run_bundle(bundle_args)

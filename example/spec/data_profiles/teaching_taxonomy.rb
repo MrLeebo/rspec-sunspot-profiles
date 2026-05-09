@@ -4,10 +4,10 @@ module TeachingTaxonomy
   TEACHING_RECORD_COUNT = 3_000
   EXECUTABLE_BENCHMARK_PROFILE_COUNT = 24
   EXECUTABLE_BENCHMARK_RECORD_COUNT = 120
-  STATIC_BENCHMARK_PROFILE_COUNT = 6
-  STATIC_BENCHMARK_RECORD_COUNT = 250
-
-  BenchmarkRecord = Struct.new(:id)
+  EXECUTABLE_BENCHMARK_REPEAT_COUNT = 2
+  STATIC_BENCHMARK_PROFILE_COUNT = 10
+  STATIC_BENCHMARK_RECORD_COUNT = 1_200
+  STATIC_BENCHMARK_REPEAT_COUNT = 4
 
   EXECUTABLE_BENCHMARK_PROFILES = Array.new(EXECUTABLE_BENCHMARK_PROFILE_COUNT) do |index|
     :"benchmark_exec_#{index + 1}"
@@ -84,9 +84,16 @@ TeachingTaxonomy::EXECUTABLE_BENCHMARK_PROFILES.each_with_index do |profile_name
   profile profile_name, dependencies: { taxonomy: "benchmark-executable-#{profile_index + 1}" } do
     offset = profile_index * TeachingTaxonomy::EXECUTABLE_BENCHMARK_RECORD_COUNT
 
-    TeachingTaxonomy::EXECUTABLE_BENCHMARK_RECORD_COUNT.times do |record_offset|
-      Sunspot.index(TeachingTaxonomy::BenchmarkRecord.new(offset + record_offset + 1))
+    payload = Array.new(TeachingTaxonomy::EXECUTABLE_BENCHMARK_RECORD_COUNT) do |record_offset|
+      {
+        id: offset + record_offset + 1,
+        title: "Executable benchmark #{profile_index + 1}-#{record_offset + 1}",
+        body: "Executable workload payload #{record_offset + 1}",
+        category: record_offset.even? ? "guides" : "tutorials"
+      }
     end
+
+    payload.map { |record| record.fetch(:id) }.sum
   end
 end
 
