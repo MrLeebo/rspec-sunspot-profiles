@@ -66,7 +66,8 @@ module RSpec
         private
 
         def sanitize(profile_name)
-          sanitized = profile_name.to_s.strip.gsub(%r{[^A-Za-z0-9._-]+}, "-").gsub(/\A-+|-+\z/, "")
+          sanitized = profile_name.to_s.strip.gsub(%r{[^A-Za-z0-9._-]+}, "-")
+          sanitized = sanitized.delete_prefix("-").delete_suffix("-")
           sanitized.empty? ? "profile" : sanitized
         end
       end

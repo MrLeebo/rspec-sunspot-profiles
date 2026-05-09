@@ -14,18 +14,18 @@ The initial implementation provides:
 
 ## Added files
 
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/Gemfile`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/Rakefile`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/rspec-sunspot-profiles.gemspec`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/lib/rspec-sunspot-profiles.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/lib/rspec/sunspot/profiles.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/lib/rspec/sunspot/profiles/version.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/lib/rspec/sunspot/profiles/fingerprint.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/lib/rspec/sunspot/profiles/cache_store.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/lib/rspec/sunspot/profiles/cache.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/spec/spec_helper.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/spec/rspec/sunspot/profiles/fingerprint_spec.rb`
-- `/home/runner/work/rspec-sunspot-profiles/rspec-sunspot-profiles/spec/rspec/sunspot/profiles/cache_spec.rb`
+- `Gemfile`
+- `Rakefile`
+- `rspec-sunspot-profiles.gemspec`
+- `lib/rspec-sunspot-profiles.rb`
+- `lib/rspec/sunspot/profiles.rb`
+- `lib/rspec/sunspot/profiles/version.rb`
+- `lib/rspec/sunspot/profiles/fingerprint.rb`
+- `lib/rspec/sunspot/profiles/cache_store.rb`
+- `lib/rspec/sunspot/profiles/cache.rb`
+- `spec/spec_helper.rb`
+- `spec/rspec/sunspot/profiles/fingerprint_spec.rb`
+- `spec/rspec/sunspot/profiles/cache_spec.rb`
 
 ## Cache contract
 
