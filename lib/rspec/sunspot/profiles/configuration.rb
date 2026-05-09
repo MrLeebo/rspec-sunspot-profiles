@@ -33,9 +33,13 @@ module RSpec
           end
         end
 
-        attr_accessor :metadata_key, :metadata_collection_key, :data_key, :results_key, :names_key
+        attr_accessor :profiles_path, :cache_root, :cache_disabled,
+                      :metadata_key, :metadata_collection_key, :data_key, :results_key, :names_key
 
         def initialize
+          @profiles_path = "spec/data_profiles"
+          @cache_root = File.expand_path("tmp/rspec-sunspot-profiles", Dir.pwd)
+          @cache_disabled = false
           @metadata_key = :sunspot_profile
           @metadata_collection_key = :sunspot_profiles
           @data_key = :sunspot_profile_data

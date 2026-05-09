@@ -4,7 +4,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
   around do |example|
     Dir.mktmpdir("rspec-sunspot-profiles") do |dir|
       RSpec::Sunspot::Profiles.reset!
-      RSpec::Sunspot::Profiles.cache_root = dir
+      RSpec::Sunspot::Profiles.configure { |c| c.cache_root = dir }
       example.run
       RSpec::Sunspot::Profiles.reset!
     end
@@ -203,6 +203,72 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(included_module).to eq(RSpec::Sunspot::Profiles::Helpers)
       expect(metadata[:sunspot_profile_data]).to eq("records" => [{ "id" => 1 }])
       expect(example).to have_received(:run)
+    end
+
+    it "auto-loads profile files from the configured profiles_path" do
+      Dir.mktmpdir("rspec-sunspot-profiles-autoload") do |dir|
+        profile_file = File.join(dir, "my_profile.rb")
+        File.write(profile_file, "RSpec::Sunspot::Profiles.define(:auto_loaded, data: { records: [{ id: 99 }] })")
+
+        described_class.configure { |c| c.profiles_path = dir }
+
+        config = Object.new
+        config.define_singleton_method(:include) { |_mod| nil }
+        config.define_singleton_method(:around) { |&_block| nil }
+
+        described_class.install!(config)
+
+        expect(described_class.configuration.profiles["auto_loaded"]).not_to be_nil
+      end
+    end
+
+    it "skips auto-loading when profiles_path is nil" do
+      described_class.configure { |c| c.profiles_path = nil }
+
+      config = Object.new
+      config.define_singleton_method(:include) { |_mod| nil }
+      config.define_singleton_method(:around) { |&_block| nil }
+
+      expect { described_class.install!(config) }.not_to raise_error
+      expect(described_class.configuration.profiles).to be_empty
+    end
+
+    it "skips auto-loading when profiles_path directory does not exist" do
+      described_class.configure { |c| c.profiles_path = "nonexistent/path/to/profiles" }
+
+      config = Object.new
+      config.define_singleton_method(:include) { |_mod| nil }
+      config.define_singleton_method(:around) { |&_block| nil }
+
+      expect { described_class.install!(config) }.not_to raise_error
+    end
+  end
+
+  describe ".configure" do
+    it "sets cache_root via the configure block" do
+      Dir.mktmpdir("rspec-sunspot-profiles-custom-root") do |dir|
+        described_class.configure { |c| c.cache_root = dir }
+        expect(described_class.cache_root).to eq(File.expand_path(dir))
+      end
+    end
+
+    it "sets cache_disabled via the configure block" do
+      described_class.configure { |c| c.cache_disabled = true }
+      expect(described_class.cache_disabled?).to be(true)
+    end
+
+    it "disabling cache via configure prevents writing metadata" do
+      described_class.configure { |c| c.cache_disabled = true }
+      described_class.define(:articles, data: { records: [{ id: 1 }] })
+
+      first_metadata = { sunspot_profile: :articles }
+      second_metadata = { sunspot_profile: :articles }
+
+      described_class.apply_to(first_metadata)
+      described_class.apply_to(second_metadata)
+
+      expect(first_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(false)
+      expect(second_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(false)
     end
   end
 

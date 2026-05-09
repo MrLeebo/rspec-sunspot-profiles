@@ -15,14 +15,22 @@ module RSpec
       class Error < StandardError; end
 
       class << self
-        attr_writer :cache_root, :cache_disabled, :cache_bust, :configuration
+        attr_writer :cache_bust, :configuration
+
+        def cache_root=(value)
+          configuration.cache_root = value
+        end
+
+        def cache_disabled=(value)
+          configuration.cache_disabled = value
+        end
 
         def cache_root
-          @cache_root ||= File.expand_path("tmp/rspec-sunspot-profiles", Dir.pwd)
+          configuration.cache_root
         end
 
         def cache_disabled?
-          @cache_disabled == true
+          configuration.cache_disabled == true
         end
 
         def cache_bust?
@@ -99,14 +107,17 @@ module RSpec
             example.run
           end
 
+          if (path = configuration.profiles_path)
+            expanded = File.expand_path(path.to_s, Dir.pwd)
+            Dir[File.join(expanded, "**", "*.rb")].each { |f| require f }
+          end
+
           @installed_configurations[rspec_config] = true
           rspec_config
         end
 
         def reset!
           @configuration = Configuration.new
-          @cache_root = nil
-          @cache_disabled = nil
           @cache_bust = nil
         end
 
