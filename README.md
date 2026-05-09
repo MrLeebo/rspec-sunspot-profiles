@@ -27,11 +27,33 @@ bundle install
 
 ## Usage
 
-Load profile files from your RSpec setup:
+Load the gem from `spec_helper.rb`:
 
 ```ruby
-Dir[File.expand_path("data_profiles/**/*.rb", __dir__)].sort.each do |path|
-  require path
+# spec_helper.rb
+require "support/rspec-sunspot-profiles"
+```
+
+And configure it in a support file:
+
+```ruby
+# spec/support/rspec-sunspot-profiles.rb
+require "rspec/sunspot/profiles"
+
+RSpec::Sunspot::Profiles.configure do |config|
+  # Directory to auto-load profile files from when configure is called.
+  # Set to nil to disable auto-loading and require profile files manually.
+  # Default: "spec/data_profiles"
+  # config.profiles_path = "spec/data_profiles"
+
+  # Directory where static profile cache artifacts are stored.
+  # Default: "tmp/rspec-sunspot-profiles"
+  # config.cache_root = "tmp/rspec-sunspot-profiles"
+
+  # Set to true to hard-disable caching for all profiles.
+  # The RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE environment variable also works as a per-run override.
+  # Default: false
+  # config.cache_disabled = false
 end
 ```
 
@@ -115,14 +137,41 @@ Each cache entry stores:
 - `artifact` — the cached profile artifact
 - `metadata.json` — cache metadata for the stored fingerprint and inputs
 
-By default, cache data is stored under `tmp/rspec-sunspot-profiles`.
+By default, cache data is stored under `tmp/rspec-sunspot-profiles` (configurable via `config.cache_root`).
+
+## Configuration
+
+Use `RSpec::Sunspot::Profiles.configure` to set project-level options:
+
+```ruby
+# spec/support/rspec-sunspot-profiles.rb
+require "rspec/sunspot/profiles"
+
+RSpec::Sunspot::Profiles.configure do |config|
+  # Directory to auto-load profile files from when configure is called.
+  # Set to nil to disable auto-loading and require profile files manually.
+  # Default: "spec/data_profiles"
+  config.profiles_path = "spec/data_profiles"
+
+  # Directory where static profile cache artifacts are stored.
+  # Default: "tmp/rspec-sunspot-profiles"
+  config.cache_root = "tmp/rspec-sunspot-profiles"
+
+  # Set to true to hard-disable caching for all profiles.
+  # The RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE environment variable also works as a per-run override.
+  # Default: false
+  config.cache_disabled = false
+end
+```
 
 ## Cache controls
 
-Use these environment variables to influence cache behavior:
+Use these environment variables for one-off, per-run overrides:
 
-- `RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE=1` — bypass cache reads and writes
+- `RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE=1` — bypass cache reads and writes for this run
 - `RSPEC_SUNSPOT_PROFILES_CACHE_BUST=1` — force a rebuild and refresh the stored cache metadata
+
+For a stable project-level setting (e.g., always disabled in CI), prefer `config.cache_disabled = true` in the configure block instead.
 
 ## Development
 
