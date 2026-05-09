@@ -111,20 +111,13 @@ RSpec.describe "searching", sunspot_profile: :minimal do
 end
 ```
 
-You can also attach multiple profiles with `:sunspot_profiles`. Before the example runs, the gem loads the requested profiles, merges their normalized payloads, and writes the result back into example metadata.
+You can also attach multiple profiles with `:sunspot_profiles`.
 
-## Metadata and helpers
-
-The gem recognizes these metadata keys:
-
-- `:sunspot_profile` for a single profile name
-- `:sunspot_profiles` for one or more profile names
-
-It also exposes the processed values through both example metadata and helper methods:
-
-- `:sunspot_profile_names` / `sunspot_profile_names`
-- `:sunspot_profile_data` / `sunspot_profile_data`
-- `:sunspot_profile_results` / `sunspot_profile_results`
+```ruby
+it "works like this", sunspot_profiles: ["newyork", "tokyo"] do
+  # ...
+end
+```
 
 ## Caching
 
