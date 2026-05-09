@@ -17,17 +17,20 @@ RSpec.describe "example Rails app integration" do
     expect(run.fetch(:success)).to be(true), run.fetch(:output)
   end
 
-  it "improves performance when cache is enabled" do
-    cold = run_example_suite(clear_cache: true)
-    hot = run_example_suite
-    disabled = run_example_suite(disable_cache: true, clear_cache: true)
+  it "improves benchmark throughput when cache is enabled" do
+    cold = run_example_benchmark(clear_cache: true)
+    hot = run_example_benchmark
+    disabled = run_example_benchmark(disable_cache: true, clear_cache: true)
 
     expect(cold.fetch(:success)).to be(true), cold.fetch(:output)
     expect(hot.fetch(:success)).to be(true), hot.fetch(:output)
     expect(disabled.fetch(:success)).to be(true), disabled.fetch(:output)
+    expect(cold.fetch(:completed_runs)).to be >= 1
+    expect(hot.fetch(:completed_runs)).to be >= 1
+    expect(disabled.fetch(:completed_runs)).to be >= 1
 
-    expect(hot.fetch(:duration)).to be < (disabled.fetch(:duration) * hot_multiplier)
-    expect(cold.fetch(:duration)).to be < (disabled.fetch(:duration) * cold_multiplier)
+    expect(hot.fetch(:throughput)).to be > (disabled.fetch(:throughput) / hot_multiplier)
+    expect(cold.fetch(:throughput)).to be > (disabled.fetch(:throughput) / cold_multiplier)
   end
 
   def run_bundle(bundle_args)
@@ -47,6 +50,47 @@ RSpec.describe "example Rails app integration" do
     duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
 
     result.merge(duration: duration)
+  end
+
+  def run_example_benchmark(disable_cache: false, clear_cache: false)
+    FileUtils.rm_rf(example_cache_root) if clear_cache
+
+    env = base_env
+    env["RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE"] = "1" if disable_cache
+
+    start_time = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    completed_runs = 0
+    completed_examples = 0
+    output = +""
+    benchmark_success = true
+
+    loop do
+      break if completed_runs.positive? &&
+               (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) >= benchmark_budget_seconds
+
+      result = run_command(benchmark_command, env: env)
+      output << result.fetch(:output)
+      output << "\n"
+      unless result.fetch(:success)
+        benchmark_success = false
+        break
+      end
+
+      completed_runs += 1
+      completed_examples += extract_example_count(result.fetch(:output))
+    end
+
+    duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
+    throughput = completed_examples / [duration, 0.001].max
+
+    {
+      success: completed_runs.positive? && benchmark_success,
+      output: output,
+      duration: duration,
+      completed_runs: completed_runs,
+      completed_examples: completed_examples,
+      throughput: throughput
+    }
   end
 
   def run_command(command, env:)
@@ -78,6 +122,16 @@ RSpec.describe "example Rails app integration" do
     ["bundle", *args]
   end
 
+  def benchmark_command
+    bundler_command(
+      "exec",
+      "rspec",
+      "spec/sunspot/cache_benchmark_shape_spec.rb",
+      "--format",
+      "progress"
+    )
+  end
+
   def example_root
     File.join(repo_root, "example")
   end
@@ -100,5 +154,16 @@ RSpec.describe "example Rails app integration" do
 
   def cold_multiplier
     ENV.fetch("RSPEC_SUNSPOT_PROFILES_COLD_MULTIPLIER", "0.97").to_f
+  end
+
+  def benchmark_budget_seconds
+    ENV.fetch("RSPEC_SUNSPOT_PROFILES_BENCHMARK_SECONDS", "10").to_f
+  end
+
+  def extract_example_count(output)
+    match = output.match(/(\d+)\s+examples?,\s+\d+\s+failures?/)
+    return 0 unless match
+
+    match[1].to_i
   end
 end

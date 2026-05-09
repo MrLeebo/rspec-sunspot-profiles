@@ -2,6 +2,22 @@
 
 module TeachingTaxonomy
   TEACHING_RECORD_COUNT = 3_000
+  EXECUTABLE_BENCHMARK_PROFILE_COUNT = 24
+  EXECUTABLE_BENCHMARK_RECORD_COUNT = 120
+  STATIC_BENCHMARK_PROFILE_COUNT = 6
+  STATIC_BENCHMARK_RECORD_COUNT = 250
+
+  BenchmarkRecord = Struct.new(:id)
+
+  EXECUTABLE_BENCHMARK_PROFILES = Array.new(EXECUTABLE_BENCHMARK_PROFILE_COUNT) do |index|
+    :"benchmark_exec_#{index + 1}"
+  end.freeze
+
+  STATIC_BENCHMARK_PROFILES = Array.new(STATIC_BENCHMARK_PROFILE_COUNT) do |index|
+    :"benchmark_static_#{index + 1}"
+  end.freeze
+
+  BENCHMARK_PROFILES = (EXECUTABLE_BENCHMARK_PROFILES + STATIC_BENCHMARK_PROFILES).freeze
 end
 
 RSpec::Sunspot::Profiles.define(
@@ -63,3 +79,39 @@ RSpec::Sunspot::Profiles.define(
     taxonomy: "teaching-catalog"
   }
 )
+
+TeachingTaxonomy::EXECUTABLE_BENCHMARK_PROFILES.each_with_index do |profile_name, profile_index|
+  profile profile_name, dependencies: { taxonomy: "benchmark-executable-#{profile_index + 1}" } do
+    offset = profile_index * TeachingTaxonomy::EXECUTABLE_BENCHMARK_RECORD_COUNT
+
+    TeachingTaxonomy::EXECUTABLE_BENCHMARK_RECORD_COUNT.times do |record_offset|
+      Sunspot.index(TeachingTaxonomy::BenchmarkRecord.new(offset + record_offset + 1))
+    end
+  end
+end
+
+TeachingTaxonomy::STATIC_BENCHMARK_PROFILES.each_with_index do |profile_name, profile_index|
+  offset = profile_index * TeachingTaxonomy::STATIC_BENCHMARK_RECORD_COUNT
+  records = Array.new(TeachingTaxonomy::STATIC_BENCHMARK_RECORD_COUNT) do |record_offset|
+    {
+      id: offset + record_offset + 1,
+      title: "Static benchmark #{profile_index + 1}-#{record_offset + 1}",
+      body: "Cacheable benchmark payload #{record_offset + 1}",
+      profile: profile_name.to_s
+    }
+  end
+
+  RSpec::Sunspot::Profiles.define(
+    profile_name,
+    data: {
+      records: records,
+      search: {
+        fulltext: "Cacheable benchmark #{profile_index + 1}",
+        with: { profile: profile_name.to_s }
+      }
+    },
+    dependencies: {
+      taxonomy: "benchmark-static-#{profile_index + 1}"
+    }
+  )
+end

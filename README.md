@@ -190,15 +190,17 @@ This repository now includes an `example/` Rails application that demonstrates a
 The main gem suite includes an integration spec that:
 
 - installs and runs the example app spec suite
-- benchmarks cache-enabled runs with a cold cache
-- benchmarks cache-enabled runs with a hot cache
-- benchmarks cache-disabled runs
-- asserts that cache-enabled runs are measurably faster than cache-disabled runs
+- runs a benchmark-focused spec made of many medium profiles (primarily executable profiles)
+- benchmarks cache-enabled throughput with a cold cache
+- benchmarks cache-enabled throughput with a hot cache
+- benchmarks cache-disabled throughput
+- asserts that cache-enabled throughput is measurably higher than cache-disabled throughput
 
 If your CI environment is unusually noisy, you can tune the expected speedup thresholds:
 
 - `RSPEC_SUNSPOT_PROFILES_HOT_MULTIPLIER` (default: `0.93`)
 - `RSPEC_SUNSPOT_PROFILES_COLD_MULTIPLIER` (default: `0.97`)
+- `RSPEC_SUNSPOT_PROFILES_BENCHMARK_SECONDS` (default: `10`)
 
 You can also run the example suite directly:
 
