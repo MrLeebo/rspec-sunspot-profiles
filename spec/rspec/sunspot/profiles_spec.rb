@@ -243,7 +243,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
     Sunspot.singleton_class.class_eval do
       define_method(:session) { @session }
       define_method(:session=) { |value| @session = value }
-      define_method(:index) { |*records| session.index(*records) }
+      define_method(:index) { |*records| self.session.index(*records) }
     end
 
     Sunspot.session = session

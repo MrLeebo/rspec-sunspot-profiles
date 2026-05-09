@@ -27,14 +27,14 @@ module RSpec
           return yield unless capturable_sunspot?
 
           original_session = sunspot.session
-          sunspot.session = CapturingSession.new(original_session, method(:capture_records))
+          sunspot.session = CapturingSession.new(original_session, on_index: method(:capture_records))
           yield
         ensure
           sunspot.session = original_session if capturable_sunspot?
         end
 
         def capturable_sunspot?
-          sunspot && sunspot.respond_to?(:session) && sunspot.respond_to?(:session=)
+          !sunspot.nil? && sunspot.respond_to?(:session) && sunspot.respond_to?(:session=)
         end
 
         def capture_records(*indexed_records)
@@ -86,12 +86,8 @@ module RSpec
           end
         end
 
-        def method_missing(method_name, *args, **kwargs, &block)
-          if kwargs.empty?
-            @session.public_send(method_name, *args, &block)
-          else
-            @session.public_send(method_name, *args, **kwargs, &block)
-          end
+        def method_missing(method_name, ...)
+          @session.public_send(method_name, ...)
         end
 
         def respond_to_missing?(method_name, include_private = false)
