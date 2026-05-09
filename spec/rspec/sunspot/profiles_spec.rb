@@ -65,19 +65,22 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(second_metadata[:sunspot_profile_data]).to eq(first_metadata[:sunspot_profile_data])
     end
 
-    it "supports executable profiles defined with the profile DSL" do
+    it "captures records indexed by executable profiles that use FactoryBot directly" do
+      stub_sunspot
       stub_const("Individual", Struct.new(:id))
       stub_const("Job", Struct.new(:id))
       stub_const("FactoryBot", Module.new)
 
-      created_records = [Individual.new(10), Job.new(20)]
-      allow(FactoryBot).to receive(:create) { created_records.shift }
+      allow(FactoryBot).to receive(:create) do |factory_name, *_traits|
+        record = factory_name == :individual ? Individual.new(10) : Job.new(20)
+        Sunspot.index(record)
+        record
+      end
 
       Object.new.instance_eval do
         profile :minimal do
-          FactoryBot :individual, :new_account
-          FactoryBot :job, :listed_today
-          data search: { commit: true }
+          FactoryBot.create(:individual, :new_account)
+          FactoryBot.create(:job, :listed_today)
         end
       end
 
@@ -85,26 +88,60 @@ RSpec.describe RSpec::Sunspot::Profiles do
 
       described_class.apply_to(metadata)
 
-      expect(FactoryBot).to have_received(:create).with(:individual, :new_account).once
-      expect(FactoryBot).to have_received(:create).with(:job, :listed_today).once
       expect(metadata[:sunspot_profile_data]).to eq(
         "records" => [
           { "class" => "Individual", "id" => 10 },
           { "class" => "Job", "id" => 20 }
-        ],
-        "search" => { "commit" => true }
+        ]
       )
       expect(metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
     end
 
+    it "captures records indexed by executable profiles without any factory helper" do
+      stub_sunspot
+
+      stub_const("Individual", Class.new do
+        attr_reader :id
+
+        def initialize(id)
+          @id = id
+        end
+
+        def self.create!
+          record = new(10)
+          Sunspot.index(record)
+          record
+        end
+      end)
+
+      described_class.profile(:minimal) do
+        Individual.create!
+      end
+
+      metadata = { sunspot_profile: :minimal }
+
+      described_class.apply_to(metadata)
+
+      expect(metadata[:sunspot_profile_data]).to eq(
+        "records" => [{ "class" => "Individual", "id" => 10 }]
+      )
+    end
+
     it "does not restore executable profiles from the cache" do
+      stub_sunspot
       stub_const("Individual", Struct.new(:id))
       stub_const("FactoryBot", Module.new)
 
-      allow(FactoryBot).to receive(:create).and_return(Individual.new(10), Individual.new(11))
+      call_count = 0
+      allow(FactoryBot).to receive(:create) do
+        call_count += 1
+        record = Individual.new(9 + call_count)
+        Sunspot.index(record)
+        record
+      end
 
       described_class.profile(:minimal) do
-        FactoryBot :individual
+        FactoryBot.create(:individual)
       end
 
       first_metadata = { sunspot_profile: :minimal }
@@ -116,6 +153,9 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(first_metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
       expect(second_metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
       expect(FactoryBot).to have_received(:create).twice
+      expect(second_metadata[:sunspot_profile_data]).to eq(
+        "records" => [{ "class" => "Individual", "id" => 11 }]
+      )
     end
 
     it "raises when an example references an unknown profile" do
@@ -124,14 +164,16 @@ RSpec.describe RSpec::Sunspot::Profiles do
       end.to raise_error(RSpec::Sunspot::Profiles::Error, "unknown sunspot profile: missing")
     end
 
-    it "raises when executable profiles use FactoryBot without the gem being loaded" do
+    it "allows executable profiles to run even when no records are indexed" do
       described_class.profile(:minimal) do
-        FactoryBot :individual
+        :no_indexing_happened
       end
 
-      expect do
-        described_class.apply_to(sunspot_profile: :minimal)
-      end.to raise_error(RSpec::Sunspot::Profiles::Error, "FactoryBot is not defined")
+      metadata = { sunspot_profile: :minimal }
+
+      described_class.apply_to(metadata)
+
+      expect(metadata[:sunspot_profile_data]).to eq({})
     end
   end
 
@@ -183,5 +225,27 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(helper_host.sunspot_profile_data).to eq("records" => [{ "id" => 1 }])
       expect(helper_host.sunspot_profile_results).to eq("articles" => { "hit" => true })
     end
+  end
+
+  def stub_sunspot
+    stub_const("Sunspot", Module.new)
+
+    session = Class.new do
+      def index(*records)
+        records.flatten
+      end
+
+      alias index! index
+      alias add index
+      alias add! index
+    end.new
+
+    Sunspot.singleton_class.class_eval do
+      define_method(:session) { @session }
+      define_method(:session=) { |value| @session = value }
+      define_method(:index) { |*records| session.index(*records) }
+    end
+
+    Sunspot.session = session
   end
 end

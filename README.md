@@ -35,19 +35,27 @@ Dir[File.expand_path("data_profiles/**/*.rb", __dir__)].sort.each do |path|
 end
 ```
 
-Define an executable profile with FactoryBot-style setup:
+Define an executable profile with ordinary setup code:
 
 ```ruby
 # spec/data_profiles/minimal.rb
 
 profile :minimal do
-  FactoryBot :individual, :new_account
-  FactoryBot :job, :listed_today
-  data search: { commit: true }
+  FactoryBot.create(:individual, :new_account)
+  FactoryBot.create(:job, :listed_today)
 end
 ```
 
-The `FactoryBot` helper delegates to `FactoryBot.create(...)`, records the created model references under `records`, and lets the block merge any extra metadata with `data`.
+Executable profiles run the block as-is. The gem watches Sunspot indexing activity during that run and records the indexed model references under `records`, so any setup strategy works as long as it results in documents being indexed.
+
+That means direct model creation works too:
+
+```ruby
+profile :minimal do
+  Individual.create!
+  Job.create!
+end
+```
 
 Static payload profiles are still supported when you want deterministic cached artifacts instead of executable setup:
 
@@ -100,7 +108,7 @@ It also exposes the processed values through both example metadata and helper me
 
 Static profile cache entries are keyed by a deterministic fingerprint built from the profile name, normalized profile data, declared dependencies, the gem version, and an internal cache format version. If those inputs do not change, the gem can restore the cached artifact from disk instead of rebuilding it.
 
-Executable block-based profiles always run when requested so their setup side effects happen for the current example.
+Executable block-based profiles always run when requested so their setup side effects happen for the current example and the captured indexed records reflect that run.
 
 Each cache entry stores:
 

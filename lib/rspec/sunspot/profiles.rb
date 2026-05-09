@@ -5,7 +5,7 @@ require_relative "profiles/fingerprint"
 require_relative "profiles/cache_store"
 require_relative "profiles/cache"
 require_relative "profiles/configuration"
-require_relative "profiles/execution_context"
+require_relative "profiles/index_capture"
 require_relative "profiles/helpers"
 require_relative "profiles/dsl"
 
@@ -116,7 +116,7 @@ module RSpec
           if profile.executable?
             return Cache::Result.new(
               hit?: false,
-              value: ExecutionContext.new.evaluate(&profile.block),
+              value: IndexCapture.new.evaluate(&profile.block),
               metadata: nil,
               fingerprint: Fingerprint.generate(
                 profile_name: profile.name,
