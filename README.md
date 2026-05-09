@@ -103,10 +103,8 @@ Apply a profile in example metadata:
 ```ruby
 RSpec.describe "searching", sunspot_profile: :minimal do
   it "uses the configured profile" do
-    expect(sunspot_profile_names).to eq(["minimal"])
-    expect(sunspot_profile_data["records"]).to include(
-      include("class" => "Individual")
-    )
+    search = Book.search { fulltext: 'great gatsby' }
+    expect(search.results.first.title).to eq('The Great Gatsby')
   end
 end
 ```
@@ -115,7 +113,8 @@ You can also attach multiple profiles with `:sunspot_profiles`.
 
 ```ruby
 it "works like this", sunspot_profiles: ["newyork", "tokyo"] do
-  # ...
+  search = Review.search { stars: 5 }
+  expect(search.results.count).to eq(50)
 end
 ```
 
