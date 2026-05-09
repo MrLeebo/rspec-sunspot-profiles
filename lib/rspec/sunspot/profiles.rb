@@ -87,8 +87,8 @@ module RSpec
         def install!(rspec_config = ::RSpec.configuration)
           return unless rspec_config
 
-          @installed_configurations ||= {}
-          return rspec_config if @installed_configurations[rspec_config.object_id]
+          @installed_configurations ||= {}.compare_by_identity
+          return rspec_config if @installed_configurations[rspec_config]
 
           rspec_config.include Helpers
           rspec_config.around do |example|
@@ -96,7 +96,7 @@ module RSpec
             example.run
           end
 
-          @installed_configurations[rspec_config.object_id] = true
+          @installed_configurations[rspec_config] = true
           rspec_config
         end
 
@@ -128,7 +128,11 @@ module RSpec
         def requested_profile_names(metadata)
           names = []
           names.concat(Array(metadata[configuration.metadata_key])) if metadata.key?(configuration.metadata_key)
-          names.concat(Array(metadata[configuration.metadata_collection_key])) if metadata.key?(configuration.metadata_collection_key)
+
+          if metadata.key?(configuration.metadata_collection_key)
+            names.concat(Array(metadata[configuration.metadata_collection_key]))
+          end
+
           names.compact.map(&:to_s).uniq
         end
 

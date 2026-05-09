@@ -2,4 +2,4 @@
 
 require "rspec/sunspot/profiles"
 
-RSpec::Sunspot::Profiles.install! if defined?(::RSpec)
+RSpec::Sunspot::Profiles.install! if defined?(RSpec)

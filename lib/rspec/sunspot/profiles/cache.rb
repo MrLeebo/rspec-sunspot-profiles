@@ -16,8 +16,8 @@ module RSpec
           @env = env
         end
 
-        def fetch(profile_name:, profile_definition:, dependencies: {}, gem_version: VERSION,
-                  cache_format_version: Fingerprint::CACHE_FORMAT_VERSION, restore:, build:)
+        def fetch(profile_name:, profile_definition:, restore:, build:, dependencies: {}, gem_version: VERSION,
+                  cache_format_version: Fingerprint::CACHE_FORMAT_VERSION)
           fingerprint_result = Fingerprint.generate(
             profile_name: profile_name,
             profile_definition: profile_definition,

@@ -24,7 +24,7 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
         raise "expected cache miss"
       },
       build: lambda { |artifact_path, payload|
-        File.write(artifact_path, "artifact:#{payload.fetch("profile_name")}")
+        File.write(artifact_path, "artifact:#{payload.fetch('profile_name')}")
         :built
       }
     )
@@ -66,7 +66,7 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
       profile_definition: profile_definition,
       dependencies: dependencies,
       restore: lambda { |artifact_path, metadata|
-        "#{File.read(artifact_path)}:#{metadata.fetch("fingerprint")}"
+        "#{File.read(artifact_path)}:#{metadata.fetch('fingerprint')}"
       },
       build: lambda { |_artifact_path, _payload|
         build_calls += 1
@@ -131,7 +131,8 @@ RSpec.describe RSpec::Sunspot::Profiles::Cache do
 
     expect(result.hit?).to be(false)
     expect(result.value).to eq(:rebuilt)
-    expect(JSON.parse(File.read(store.metadata_path(profile_name: profile_name))).fetch("cache_format_version")).to eq(2)
+    metadata = JSON.parse(File.read(store.metadata_path(profile_name: profile_name)))
+    expect(metadata.fetch("cache_format_version")).to eq(2)
   end
 
   it "rebuilds when manual cache busting is enabled" do
