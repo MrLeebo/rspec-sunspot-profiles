@@ -109,7 +109,7 @@ module RSpec
 
           if (path = configuration.profiles_path)
             expanded = File.expand_path(path.to_s, Dir.pwd)
-            Dir[File.join(expanded, "**", "*.rb")].each { |f| require f }
+            Dir[File.join(expanded, "**", "*.rb")].each { |f| require f } if File.directory?(expanded)
           end
 
           @installed_configurations[rspec_config] = true

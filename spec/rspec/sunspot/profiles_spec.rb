@@ -219,6 +219,9 @@ RSpec.describe RSpec::Sunspot::Profiles do
         described_class.install!(config)
 
         expect(described_class.configuration.profiles["auto_loaded"]).not_to be_nil
+        expect(described_class.configuration.profiles["auto_loaded"].data).to eq(
+          { records: [{ id: 99 }] }
+        )
       end
     end
 
