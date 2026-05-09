@@ -29,8 +29,8 @@ RSpec.describe "example Rails app integration" do
     expect(hot.fetch(:completed_runs)).to be >= 1
     expect(disabled.fetch(:completed_runs)).to be >= 1
 
-    expect(hot.fetch(:throughput)).to be > (disabled.fetch(:throughput) * hot_multiplier)
-    expect(cold.fetch(:throughput)).to be > (disabled.fetch(:throughput) * cold_multiplier)
+    expect(hot.fetch(:throughput)).to be > (disabled.fetch(:throughput) * hot_throughput_floor)
+    expect(cold.fetch(:throughput)).to be > (disabled.fetch(:throughput) * cold_throughput_floor)
     expect([cold.fetch(:throughput), hot.fetch(:throughput)].max).to be > (disabled.fetch(:throughput) * 1.03)
   end
 
@@ -67,7 +67,7 @@ RSpec.describe "example Rails app integration" do
 
     loop do
       break if completed_runs.positive? &&
-               (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) >= benchmark_budget_seconds
+               (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time) >= benchmark_window_seconds
 
       result = run_command(benchmark_command, env: env)
       output << result.fetch(:output)
@@ -82,7 +82,7 @@ RSpec.describe "example Rails app integration" do
     end
 
     duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
-    throughput = completed_examples / [duration, 0.001].max
+    throughput = completed_examples / [duration, min_benchmark_duration_seconds].max
 
     {
       success: completed_runs.positive? && benchmark_success,
@@ -149,15 +149,15 @@ RSpec.describe "example Rails app integration" do
     File.expand_path("../../..", __dir__)
   end
 
-  def hot_multiplier
+  def hot_throughput_floor
     ENV.fetch("RSPEC_SUNSPOT_PROFILES_HOT_MULTIPLIER", "0.93").to_f
   end
 
-  def cold_multiplier
+  def cold_throughput_floor
     ENV.fetch("RSPEC_SUNSPOT_PROFILES_COLD_MULTIPLIER", "0.97").to_f
   end
 
-  def benchmark_budget_seconds
+  def benchmark_window_seconds
     ENV.fetch("RSPEC_SUNSPOT_PROFILES_BENCHMARK_SECONDS", "10").to_f
   end
 
@@ -166,5 +166,9 @@ RSpec.describe "example Rails app integration" do
     return 0 unless match
 
     match[1].to_i
+  end
+
+  def min_benchmark_duration_seconds
+    0.001
   end
 end
