@@ -27,23 +27,21 @@ bundle install
 
 ## Usage
 
-Load the gem and call `install!` from your RSpec configuration. By default, profile files are automatically loaded from `spec/data_profiles/`:
+Load the gem and call `configure` from your RSpec configuration. By default, profile files are automatically loaded from `spec/data_profiles/`:
 
 ```ruby
-# spec/support/sunspot_profiles.rb
+# spec_helper.rb
 require "rspec/sunspot/profiles"
 
-RSpec::Sunspot::Profiles.install!
+RSpec::Sunspot::Profiles.configure do |config|
+  # config.profiles_path = "spec/search_fixtures"  # custom path
+  # config.profiles_path = nil                     # disable auto-loading
+end
 ```
 
-You can also provide a custom path or disable auto-loading entirely:
+`configure` automatically calls `install!` after evaluating the block, so no separate `install!` call is needed. If you have no configuration to set, you can call `install!` directly instead:
 
 ```ruby
-RSpec::Sunspot::Profiles.configure do |config|
-  config.profiles_path = "spec/search_fixtures"  # custom path
-  # config.profiles_path = nil                   # disable auto-loading
-end
-
 RSpec::Sunspot::Profiles.install!
 ```
 
@@ -135,7 +133,7 @@ Use `RSpec::Sunspot::Profiles.configure` to set project-level options:
 
 ```ruby
 RSpec::Sunspot::Profiles.configure do |config|
-  # Directory to auto-load profile files from when install! is called.
+  # Directory to auto-load profile files from when configure is called.
   # Set to nil to disable auto-loading and require profile files manually.
   # Default: "spec/data_profiles"
   config.profiles_path = "spec/data_profiles"

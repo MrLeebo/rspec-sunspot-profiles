@@ -56,6 +56,7 @@ module RSpec
 
         def configure
           yield(configuration)
+          install!
         end
 
         def define(name, data: nil, dependencies: {}, &)

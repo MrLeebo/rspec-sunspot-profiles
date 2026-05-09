@@ -248,6 +248,12 @@ RSpec.describe RSpec::Sunspot::Profiles do
   end
 
   describe ".configure" do
+    it "automatically calls install! after the block" do
+      allow(described_class).to receive(:install!)
+      described_class.configure { |c| c.cache_disabled = true }
+      expect(described_class).to have_received(:install!)
+    end
+
     it "sets cache_root via the configure block" do
       Dir.mktmpdir("rspec-sunspot-profiles-custom-root") do |dir|
         described_class.configure { |c| c.cache_root = dir }
