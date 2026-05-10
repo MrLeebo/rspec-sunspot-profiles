@@ -70,13 +70,7 @@ profile :minimal do
 end
 ```
 
-By default the setup block runs fresh for each example. Pass `shared: true` to run the block once for the entire suite and reuse the result across all examples that request that profile. This is useful for large, read-only datasets:
-
-```ruby
-profile :large_catalogue, shared: true do
-  100.times { FactoryBot.create(:product) }
-end
-```
+Profile results are cached for the duration of the suite. Every example that requests the same profile receives the same pre-captured data, so the setup block runs only once no matter how many examples use it.
 
 Apply a profile in example metadata:
 

@@ -4,13 +4,9 @@ module RSpec
   module Sunspot
     module Profiles
       class Configuration
-        Profile = Struct.new(:name, :block, :shared, keyword_init: true) do
+        Profile = Struct.new(:name, :block, keyword_init: true) do
           def executable?
             !block.nil?
-          end
-
-          def shared?
-            !!shared
           end
         end
 
@@ -39,13 +35,12 @@ module RSpec
           @profile_cache[name.to_s] = data
         end
 
-        def define(name, shared: false, &block)
+        def define(name, &block)
           validate_definition!(name, block)
 
           profile = Profile.new(
             name: name.to_s,
-            block: block,
-            shared: shared
+            block: block
           )
 
           raise Error, "sunspot profile already registered: #{profile.name}" if @profiles.key?(profile.name)
