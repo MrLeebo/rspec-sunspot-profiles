@@ -33,6 +33,10 @@ require "support/rspec_sunspot_profiles"
 require "rspec/sunspot/profiles"
 
 RSpec::Sunspot::Profiles.configure do |config|
+  # Directory to auto-load profile files from when configure is called.
+  # Valid values: String path, Pathname, or nil.
+  # Set to nil to disable auto-loading and require profile files manually.
+  # Default: "spec/data_profiles"
   config.profiles_path = "spec/data_profiles"
 end
 ```
@@ -65,12 +69,13 @@ end
 
 ```ruby
 # spec/data_profiles/search_content.rb
-profile :articles do
+profile :minimal do
   Article.create!(title: "Solr basics", body: "Getting started with Sunspot")
-  Article.create!(title: "RSpec tips", body: "Testing search behavior")
 end
 
-profile :comments do
+profile :full do
+  Article.create!(title: "Solr basics", body: "Getting started with Sunspot")
+  Article.create!(title: "RSpec tips", body: "Testing search behavior")
   Comment.create!(body: "Sunspot is fast for this use case")
 end
 ```
@@ -80,14 +85,14 @@ Profiles run as normal Ruby blocks. While they run, the gem captures records ind
 ### 3) RSpec examples using the same profiles
 
 ```ruby
-RSpec.describe "Search", sunspot_profile: :articles do
+RSpec.describe "Search", sunspot_profile: :minimal do
   it "finds indexed articles" do
     results = Article.search { fulltext "Sunspot" }.results
     expect(results.map(&:title)).to include("Solr basics")
   end
 end
 
-RSpec.describe "Search with multiple profiles", sunspot_profiles: %i[articles comments] do
+RSpec.describe "Search with multiple profiles", sunspot_profiles: %i[minimal full] do
   it "applies both profiles to one example" do
     article_results = Article.search { fulltext "RSpec" }.results
     comment_results = Comment.search { fulltext "Sunspot" }.results
