@@ -26,8 +26,7 @@ module RSpec
           @profiles = {}
         end
 
-        def define(name, data: nil, dependencies: nil, &block)
-          _dependencies = dependencies
+        def define(name, data: nil, &block)
           validate_definition!(name, data, block)
 
           profile = Profile.new(

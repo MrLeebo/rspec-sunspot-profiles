@@ -24,8 +24,8 @@ module RSpec
           install!
         end
 
-        def define(name, data: nil, dependencies: nil, &)
-          configuration.define(name, data: data, dependencies: dependencies, &)
+        def define(name, data: nil, &)
+          configuration.define(name, data: data, &)
         end
 
         alias register define
@@ -35,8 +35,7 @@ module RSpec
           apply_to(example.metadata, **)
         end
 
-        def apply_to(metadata = nil, cache_coordinator: nil, **metadata_keywords)
-          _cache_coordinator = cache_coordinator
+        def apply_to(metadata = nil, **metadata_keywords)
           metadata ||= metadata_keywords
           profile_names = requested_profile_names(metadata)
           return metadata if profile_names.empty?
