@@ -4,13 +4,9 @@ module RSpec
   module Sunspot
     module Profiles
       class Configuration
-        Profile = Struct.new(:name, :data, :block, keyword_init: true) do
+        Profile = Struct.new(:name, :block, keyword_init: true) do
           def executable?
             !block.nil?
-          end
-
-          def normalized_data
-            Normalization.normalize_payload(data || {})
           end
         end
 
@@ -26,12 +22,11 @@ module RSpec
           @profiles = {}
         end
 
-        def define(name, data: nil, &block)
-          validate_definition!(name, data, block)
+        def define(name, &block)
+          validate_definition!(name, block)
 
           profile = Profile.new(
             name: name.to_s,
-            data: data,
             block: block
           )
 
@@ -55,11 +50,10 @@ module RSpec
 
         private
 
-        def validate_definition!(name, data, block)
-          return if block && data.nil?
-          return if !block && !data.nil?
+        def validate_definition!(name, block)
+          return if block
 
-          raise ArgumentError, "profile #{name} must be defined with either data or a block"
+          raise ArgumentError, "profile #{name} must be defined with a block"
         end
       end
     end

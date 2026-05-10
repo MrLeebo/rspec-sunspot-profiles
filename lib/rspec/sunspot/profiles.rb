@@ -24,8 +24,8 @@ module RSpec
           install!
         end
 
-        def define(name, data: nil, &)
-          configuration.define(name, data: data, &)
+        def define(name, &)
+          configuration.define(name, &)
         end
 
         alias register define
@@ -49,7 +49,7 @@ module RSpec
 
             merged_data = deep_merge(merged_data, profile_data)
             results[profile.name] = {
-              "type" => profile.executable? ? "executable" : "static",
+              "type" => "executable",
               "data" => profile_data
             }
           end
@@ -88,11 +88,7 @@ module RSpec
         private
 
         def fetch_profile(profile)
-          if profile.executable?
-            IndexCapture.new.evaluate(&profile.block)
-          else
-            profile.normalized_data
-          end
+          IndexCapture.new.evaluate(&profile.block)
         end
 
         def requested_profile_names(metadata)

@@ -9,13 +9,12 @@ RSpec.describe RSpec::Sunspot::Profiles do
 
   describe ".apply_to" do
     it "adds registered profile data into example metadata" do
-      described_class.define(
-        :articles,
-        data: {
-          records: [{ id: 1, title: "First article" }],
-          settings: { commit: true }
-        }
-      )
+      stub_sunspot
+      stub_const("Article", Struct.new(:id))
+
+      described_class.define(:articles) do
+        Sunspot.index(Article.new(1))
+      end
 
       metadata = { sunspot_profile: :articles }
 
@@ -23,33 +22,42 @@ RSpec.describe RSpec::Sunspot::Profiles do
 
       expect(metadata[:sunspot_profile_names]).to eq(["articles"])
       expect(metadata[:sunspot_profile_data]).to eq(
-        "records" => [{ "id" => 1, "title" => "First article" }],
-        "settings" => { "commit" => true }
+        "records" => [{ "class" => "Article", "id" => 1 }]
       )
       expect(metadata[:sunspot_profile_results]).to eq(
         "articles" => {
-          "type" => "static",
+          "type" => "executable",
           "data" => metadata[:sunspot_profile_data]
         }
       )
     end
 
     it "merges multiple profiles into one metadata payload" do
-      described_class.define(:articles, data: { records: [{ id: 1 }], filters: { published: true } })
-      described_class.define(:comments, data: { records: [{ id: 2 }], filters: { locale: "en" } })
+      stub_sunspot
+      stub_const("Article", Struct.new(:id))
+      stub_const("Comment", Struct.new(:id))
+
+      described_class.define(:articles) { Sunspot.index(Article.new(1)) }
+      described_class.define(:comments) { Sunspot.index(Comment.new(2)) }
 
       metadata = { sunspot_profiles: %i[articles comments] }
 
       described_class.apply_to(metadata)
 
       expect(metadata[:sunspot_profile_data]).to eq(
-        "records" => [{ "id" => 1 }, { "id" => 2 }],
-        "filters" => { "published" => true, "locale" => "en" }
+        "records" => [{ "class" => "Article", "id" => 1 }, { "class" => "Comment", "id" => 2 }]
       )
     end
 
-    it "reapplies static profile data on subsequent applications" do
-      described_class.define(:articles, data: { records: [{ id: 1 }] })
+    it "runs profiles on subsequent applications" do
+      stub_sunspot
+      stub_const("Article", Struct.new(:id))
+      call_count = 0
+
+      described_class.define(:articles) do
+        call_count += 1
+        Sunspot.index(Article.new(call_count))
+      end
 
       first_metadata = { sunspot_profile: :articles }
       second_metadata = { sunspot_profile: :articles }
@@ -57,8 +65,13 @@ RSpec.describe RSpec::Sunspot::Profiles do
       described_class.apply_to(first_metadata)
       described_class.apply_to(second_metadata)
 
-      expect(first_metadata[:sunspot_profile_data]).to eq(second_metadata[:sunspot_profile_data])
-      expect(second_metadata.dig(:sunspot_profile_results, "articles", "type")).to eq("static")
+      expect(first_metadata[:sunspot_profile_data]).to eq(
+        "records" => [{ "class" => "Article", "id" => 1 }]
+      )
+      expect(second_metadata[:sunspot_profile_data]).to eq(
+        "records" => [{ "class" => "Article", "id" => 2 }]
+      )
+      expect(second_metadata.dig(:sunspot_profile_results, "articles", "type")).to eq("executable")
     end
 
     it "captures records indexed by executable profiles that use FactoryBot directly" do
@@ -174,7 +187,9 @@ RSpec.describe RSpec::Sunspot::Profiles do
 
   describe ".install!" do
     it "wires metadata application into an RSpec configuration" do
-      described_class.define(:articles, data: { records: [{ id: 1 }] })
+      stub_sunspot
+      stub_const("Article", Struct.new(:id))
+      described_class.define(:articles) { Sunspot.index(Article.new(1)) }
 
       included_module = nil
       around_hook = nil
@@ -196,14 +211,14 @@ RSpec.describe RSpec::Sunspot::Profiles do
       around_hook.call(example)
 
       expect(included_module).to eq(RSpec::Sunspot::Profiles::Helpers)
-      expect(metadata[:sunspot_profile_data]).to eq("records" => [{ "id" => 1 }])
+      expect(metadata[:sunspot_profile_data]).to eq("records" => [{ "class" => "Article", "id" => 1 }])
       expect(example).to have_received(:run)
     end
 
     it "auto-loads profile files from the configured profiles_path" do
       Dir.mktmpdir("rspec-sunspot-profiles-autoload") do |dir|
         profile_file = File.join(dir, "my_profile.rb")
-        File.write(profile_file, "RSpec::Sunspot::Profiles.define(:auto_loaded, data: { records: [{ id: 99 }] })")
+        File.write(profile_file, "RSpec::Sunspot::Profiles.define(:auto_loaded) {}\n")
 
         described_class.configuration.profiles_path = dir
 
@@ -214,9 +229,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
         described_class.install!(config)
 
         expect(described_class.configuration.profiles["auto_loaded"]).not_to be_nil
-        expect(described_class.configuration.profiles["auto_loaded"].data).to eq(
-          { records: [{ id: 99 }] }
-        )
+        expect(described_class.configuration.profiles["auto_loaded"].block).not_to be_nil
       end
     end
 
@@ -251,18 +264,24 @@ RSpec.describe RSpec::Sunspot::Profiles do
   end
 
   describe "duplicate profile registration" do
+    it "requires profiles to be defined with a block" do
+      expect do
+        described_class.define(:articles)
+      end.to raise_error(ArgumentError, "profile articles must be defined with a block")
+    end
+
     it "raises when the same profile name is registered twice" do
-      described_class.define(:articles, data: { records: [{ id: 1 }] })
+      described_class.define(:articles) { nil }
 
       expect do
-        described_class.define(:articles, data: { records: [{ id: 2 }] })
+        described_class.define(:articles) { nil }
       end.to raise_error(RSpec::Sunspot::Profiles::Error, "sunspot profile already registered: articles")
     end
 
     it "raises when auto-loaded files define the same profile twice" do
       Dir.mktmpdir("rspec-sunspot-profiles-duplicates") do |dir|
-        File.write(File.join(dir, "first.rb"), "profile :duplicate, data: { records: [{ id: 1 }] }\n")
-        File.write(File.join(dir, "second.rb"), "profile :duplicate, data: { records: [{ id: 2 }] }\n")
+        File.write(File.join(dir, "first.rb"), "profile :duplicate do; end\n")
+        File.write(File.join(dir, "second.rb"), "profile :duplicate do; end\n")
 
         described_class.configuration.profiles_path = dir
 
@@ -285,16 +304,16 @@ RSpec.describe RSpec::Sunspot::Profiles do
         "RSpec example",
         metadata: {
           sunspot_profile_names: ["articles"],
-          sunspot_profile_data: { "records" => [{ "id" => 1 }] },
-          sunspot_profile_results: { "articles" => { "type" => "static" } }
+          sunspot_profile_data: { "records" => [{ "class" => "Article", "id" => 1 }] },
+          sunspot_profile_results: { "articles" => { "type" => "executable" } }
         }
       )
 
       allow(RSpec).to receive(:current_example).and_return(example)
 
       expect(helper_host.sunspot_profile_names).to eq(["articles"])
-      expect(helper_host.sunspot_profile_data).to eq("records" => [{ "id" => 1 }])
-      expect(helper_host.sunspot_profile_results).to eq("articles" => { "type" => "static" })
+      expect(helper_host.sunspot_profile_data).to eq("records" => [{ "class" => "Article", "id" => 1 }])
+      expect(helper_host.sunspot_profile_results).to eq("articles" => { "type" => "executable" })
     end
   end
 
