@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.authors = ["MrLeebo contributors"]
   spec.email = ["noreply@example.com"]
 
-  spec.summary = "Cache-aware profile reuse helpers for RSpec Sunspot test runs."
-  spec.description = "Provides deterministic fingerprinting and on-disk caching for reusable Sunspot profiles in RSpec."
+  spec.summary = "Reusable Sunspot profile helpers for RSpec test runs."
+  spec.description = "Provides named static and executable Sunspot profiles that can be applied to RSpec examples."
   spec.homepage = "https://github.com/MrLeebo/rspec-sunspot-profiles"
   spec.required_ruby_version = ">= 3.2.0"
 

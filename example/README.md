@@ -1,24 +1,24 @@
-# README
+# Example Rails app
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This Rails app demonstrates how to use `rspec-sunspot-profiles` through a local path dependency.
 
-Things you may want to cover:
+## What it covers
 
-* Ruby version
+- static profiles loaded from `spec/data_profiles`
+- merged metadata access through `sunspot_profile_names`, `sunspot_profile_data`, and `sunspot_profile_results`
+- a larger static teaching catalog fixture for search-oriented examples
 
-* System dependencies
+## Run the example suite
 
-* Configuration
+From this directory:
 
-* Database creation
+```bash
+bundle install
+bundle exec rspec
+```
 
-* Database initialization
+## Files to look at
 
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+- `spec/support/rspec_sunspot_profiles.rb` — gem configuration for the example app
+- `spec/data_profiles/teaching_taxonomy.rb` — sample static profiles
+- `spec/sunspot/profile_metadata_spec.rb` — metadata usage examples

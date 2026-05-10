@@ -2,12 +2,9 @@
 
 RSpec.describe RSpec::Sunspot::Profiles do
   around do |example|
-    Dir.mktmpdir("rspec-sunspot-profiles") do |dir|
-      RSpec::Sunspot::Profiles.reset!
-      RSpec::Sunspot::Profiles.configure { |c| c.cache_root = dir }
-      example.run
-      RSpec::Sunspot::Profiles.reset!
-    end
+    RSpec::Sunspot::Profiles.reset!
+    example.run
+    RSpec::Sunspot::Profiles.reset!
   end
 
   describe ".apply_to" do
@@ -29,11 +26,11 @@ RSpec.describe RSpec::Sunspot::Profiles do
         "records" => [{ "id" => 1, "title" => "First article" }],
         "settings" => { "commit" => true }
       )
-      expect(metadata[:sunspot_profile_results]).to include(
-        "articles" => include(
-          "hit" => false,
+      expect(metadata[:sunspot_profile_results]).to eq(
+        "articles" => {
+          "type" => "static",
           "data" => metadata[:sunspot_profile_data]
-        )
+        }
       )
     end
 
@@ -51,7 +48,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
       )
     end
 
-    it "reuses cached profile data on subsequent applications" do
+    it "reapplies static profile data on subsequent applications" do
       described_class.define(:articles, data: { records: [{ id: 1 }] })
 
       first_metadata = { sunspot_profile: :articles }
@@ -60,9 +57,8 @@ RSpec.describe RSpec::Sunspot::Profiles do
       described_class.apply_to(first_metadata)
       described_class.apply_to(second_metadata)
 
-      expect(first_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(false)
-      expect(second_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(true)
-      expect(second_metadata[:sunspot_profile_data]).to eq(first_metadata[:sunspot_profile_data])
+      expect(first_metadata[:sunspot_profile_data]).to eq(second_metadata[:sunspot_profile_data])
+      expect(second_metadata.dig(:sunspot_profile_results, "articles", "type")).to eq("static")
     end
 
     it "captures records indexed by executable profiles that use FactoryBot directly" do
@@ -94,7 +90,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
           { "class" => "Job", "id" => 20 }
         ]
       )
-      expect(metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
+      expect(metadata.dig(:sunspot_profile_results, "minimal", "type")).to eq("executable")
     end
 
     it "captures records indexed by executable profiles without any factory helper" do
@@ -127,7 +123,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
       )
     end
 
-    it "does not restore executable profiles from the cache" do
+    it "runs executable profiles each time they are requested" do
       stub_sunspot
       stub_const("Individual", Struct.new(:id))
       stub_const("FactoryBot", Module.new)
@@ -150,12 +146,11 @@ RSpec.describe RSpec::Sunspot::Profiles do
       described_class.apply_to(first_metadata)
       described_class.apply_to(second_metadata)
 
-      expect(first_metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
-      expect(second_metadata.dig(:sunspot_profile_results, "minimal", "hit")).to be(false)
       expect(FactoryBot).to have_received(:create).twice
       expect(second_metadata[:sunspot_profile_data]).to eq(
         "records" => [{ "class" => "Individual", "id" => 11 }]
       )
+      expect(second_metadata.dig(:sunspot_profile_results, "minimal", "type")).to eq("executable")
     end
 
     it "raises when an example references an unknown profile" do
@@ -250,34 +245,35 @@ RSpec.describe RSpec::Sunspot::Profiles do
   describe ".configure" do
     it "automatically calls install! after the block" do
       allow(described_class).to receive(:install!)
-      described_class.configure { |c| c.cache_disabled = true }
+      described_class.configure { |c| c.profiles_path = "spec/data_profiles" }
       expect(described_class).to have_received(:install!)
     end
+  end
 
-    it "sets cache_root via the configure block" do
-      Dir.mktmpdir("rspec-sunspot-profiles-custom-root") do |dir|
-        described_class.configure { |c| c.cache_root = dir }
-        expect(described_class.cache_root).to eq(File.expand_path(dir))
-      end
-    end
-
-    it "sets cache_disabled via the configure block" do
-      described_class.configure { |c| c.cache_disabled = true }
-      expect(described_class.cache_disabled?).to be(true)
-    end
-
-    it "disabling cache via configure prevents writing metadata" do
-      described_class.configure { |c| c.cache_disabled = true }
+  describe "duplicate profile registration" do
+    it "raises when the same profile name is registered twice" do
       described_class.define(:articles, data: { records: [{ id: 1 }] })
 
-      first_metadata = { sunspot_profile: :articles }
-      second_metadata = { sunspot_profile: :articles }
+      expect do
+        described_class.define(:articles, data: { records: [{ id: 2 }] })
+      end.to raise_error(RSpec::Sunspot::Profiles::Error, "sunspot profile already registered: articles")
+    end
 
-      described_class.apply_to(first_metadata)
-      described_class.apply_to(second_metadata)
+    it "raises when auto-loaded files define the same profile twice" do
+      Dir.mktmpdir("rspec-sunspot-profiles-duplicates") do |dir|
+        File.write(File.join(dir, "first.rb"), "profile :duplicate, data: { records: [{ id: 1 }] }\n")
+        File.write(File.join(dir, "second.rb"), "profile :duplicate, data: { records: [{ id: 2 }] }\n")
 
-      expect(first_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(false)
-      expect(second_metadata.dig(:sunspot_profile_results, "articles", "hit")).to be(false)
+        described_class.configuration.profiles_path = dir
+
+        config = Object.new
+        config.define_singleton_method(:include) { |_mod| nil }
+        config.define_singleton_method(:around) { |&_block| nil }
+
+        expect do
+          described_class.install!(config)
+        end.to raise_error(RSpec::Sunspot::Profiles::Error, "sunspot profile already registered: duplicate")
+      end
     end
   end
 
@@ -290,7 +286,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
         metadata: {
           sunspot_profile_names: ["articles"],
           sunspot_profile_data: { "records" => [{ "id" => 1 }] },
-          sunspot_profile_results: { "articles" => { "hit" => true } }
+          sunspot_profile_results: { "articles" => { "type" => "static" } }
         }
       )
 
@@ -298,7 +294,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
 
       expect(helper_host.sunspot_profile_names).to eq(["articles"])
       expect(helper_host.sunspot_profile_data).to eq("records" => [{ "id" => 1 }])
-      expect(helper_host.sunspot_profile_results).to eq("articles" => { "hit" => true })
+      expect(helper_host.sunspot_profile_results).to eq("articles" => { "type" => "static" })
     end
   end
 

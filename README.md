@@ -1,13 +1,13 @@
 # rspec-sunspot-profiles
 
-`rspec-sunspot-profiles` is a small helper gem for RSpec suites that exercise Sunspot-backed search behavior. It lets you register named Sunspot data profiles, apply them to examples through metadata, and reuse cached profile artifacts across runs when the underlying inputs have not changed.
+`rspec-sunspot-profiles` is a small helper gem for RSpec suites that exercise Sunspot-backed search behavior. It lets you register named Sunspot data profiles, apply them to examples through metadata, and reuse that setup across specs without burying fixture shape inside each example.
 
 The gem is designed to keep search-oriented specs readable and repeatable:
 
-- define reusable profile payloads once
+- define reusable static payloads once
 - attach one or more profiles to an example with RSpec metadata
 - access the merged profile data from example metadata or helper methods
-- avoid rebuilding the same profile data when a deterministic cache fingerprint still matches
+- run executable setup blocks when a profile needs live indexing side effects
 
 ## Installation
 
@@ -45,15 +45,6 @@ RSpec::Sunspot::Profiles.configure do |config|
   # Set to nil to disable auto-loading and require profile files manually.
   # Default: "spec/data_profiles"
   # config.profiles_path = "spec/data_profiles"
-
-  # Directory where static profile cache artifacts are stored.
-  # Default: "tmp/rspec-sunspot-profiles"
-  # config.cache_root = "tmp/rspec-sunspot-profiles"
-
-  # Set to true to hard-disable caching for all profiles.
-  # The RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE environment variable also works as a per-run override.
-  # Default: false
-  # config.cache_disabled = false
 end
 ```
 
@@ -79,7 +70,7 @@ profile :minimal do
 end
 ```
 
-Static payload profiles are still supported when you want deterministic cached artifacts instead of executable setup:
+Use executable profiles when the setup needs to run for the current example. Use static payload profiles when the fixture data is already known and can be declared directly:
 
 ```ruby
 RSpec::Sunspot::Profiles.define(
@@ -91,9 +82,6 @@ RSpec::Sunspot::Profiles.define(
     search: {
       commit: true
     }
-  },
-  dependencies: {
-    solr_url: "http://localhost:8983/solr/test"
   }
 )
 ```
@@ -103,8 +91,8 @@ Apply a profile in example metadata:
 ```ruby
 RSpec.describe "searching", sunspot_profile: :minimal do
   it "uses the configured profile" do
-    search = Book.search { fulltext: 'great gatsby' }
-    expect(search.results.first.title).to eq('The Great Gatsby')
+    search = Book.search { fulltext: "great gatsby" }
+    expect(search.results.first.title).to eq("The Great Gatsby")
   end
 end
 ```
@@ -118,18 +106,11 @@ it "works like this", sunspot_profiles: ["newyork", "tokyo"] do
 end
 ```
 
-## Caching
+Applied examples expose:
 
-Static profile cache entries are keyed by a deterministic fingerprint built from the profile name, normalized profile data, declared dependencies, the gem version, and an internal cache format version. If those inputs do not change, the gem can restore the cached artifact from disk instead of rebuilding it.
-
-Executable block-based profiles always run when requested so their setup side effects happen for the current example and the captured indexed records reflect that run.
-
-Each cache entry stores:
-
-- `artifact` — the cached profile artifact
-- `metadata.json` — cache metadata for the stored fingerprint and inputs
-
-By default, cache data is stored under `tmp/rspec-sunspot-profiles` (configurable via `config.cache_root`).
+- `sunspot_profile_names` — the ordered list of applied profile names
+- `sunspot_profile_data` — the merged normalized payload from all applied profiles
+- `sunspot_profile_results` — per-profile metadata including the profile type and normalized data
 
 ## Configuration
 
@@ -144,26 +125,10 @@ RSpec::Sunspot::Profiles.configure do |config|
   # Set to nil to disable auto-loading and require profile files manually.
   # Default: "spec/data_profiles"
   config.profiles_path = "spec/data_profiles"
-
-  # Directory where static profile cache artifacts are stored.
-  # Default: "tmp/rspec-sunspot-profiles"
-  config.cache_root = "tmp/rspec-sunspot-profiles"
-
-  # Set to true to hard-disable caching for all profiles.
-  # The RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE environment variable also works as a per-run override.
-  # Default: false
-  config.cache_disabled = false
 end
 ```
 
-## Cache controls
-
-Use these environment variables for one-off, per-run overrides:
-
-- `RSPEC_SUNSPOT_PROFILES_CACHE_DISABLE=1` — bypass cache reads and writes for this run
-- `RSPEC_SUNSPOT_PROFILES_CACHE_BUST=1` — force a rebuild and refresh the stored cache metadata
-
-For a stable project-level setting (e.g., always disabled in CI), prefer `config.cache_disabled = true` in the configure block instead.
+Profile names must be unique. Registering the same name twice raises `RSpec::Sunspot::Profiles::Error` so duplicate auto-loaded files fail fast instead of silently overwriting each other.
 
 ## Development
 
@@ -175,9 +140,9 @@ bundle exec rubocop
 bundle exec rspec
 ```
 
-## Example Rails app and cache benchmarking
+## Example Rails app
 
-See [docs/benchmarking.md](docs/benchmarking.md) for details on the example Rails application and cache benchmarking integration.
+See [example/README.md](example/README.md) for the included Rails application that demonstrates profile usage through a local path dependency.
 
 ## Publishing
 

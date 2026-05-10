@@ -12,6 +12,7 @@ RSpec.describe "Sunspot profile metadata" do
       "fulltext" => "Sunspot",
       "with" => { "category" => "guides" }
     )
+    expect(sunspot_profile_results.fetch("articles")).to include("type" => "static")
   end
 
   it "merges multiple profiles for a single example", sunspot_profiles: %i[articles comments] do
