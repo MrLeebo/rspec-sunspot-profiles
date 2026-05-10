@@ -70,6 +70,8 @@ profile :minimal do
 end
 ```
 
+Profile results are cached for the duration of the suite. Every example that requests the same profile receives the same pre-captured data, so the setup block runs only once no matter how many examples use it.
+
 Apply a profile in example metadata:
 
 ```ruby

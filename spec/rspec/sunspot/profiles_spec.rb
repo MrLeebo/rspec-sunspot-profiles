@@ -49,7 +49,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
       )
     end
 
-    it "runs profiles on subsequent applications" do
+    it "caches profile results for subsequent applications" do
       stub_sunspot
       stub_const("Article", Struct.new(:id))
       call_count = 0
@@ -65,11 +65,12 @@ RSpec.describe RSpec::Sunspot::Profiles do
       described_class.apply_to(first_metadata)
       described_class.apply_to(second_metadata)
 
+      expect(call_count).to eq(1)
       expect(first_metadata[:sunspot_profile_data]).to eq(
         "records" => [{ "class" => "Article", "id" => 1 }]
       )
       expect(second_metadata[:sunspot_profile_data]).to eq(
-        "records" => [{ "class" => "Article", "id" => 2 }]
+        "records" => [{ "class" => "Article", "id" => 1 }]
       )
       expect(second_metadata.dig(:sunspot_profile_results, "articles", "type")).to eq("executable")
     end
@@ -136,7 +137,7 @@ RSpec.describe RSpec::Sunspot::Profiles do
       )
     end
 
-    it "runs executable profiles each time they are requested" do
+    it "runs the profile block only once regardless of how many examples request it" do
       stub_sunspot
       stub_const("Individual", Struct.new(:id))
       stub_const("FactoryBot", Module.new)
@@ -159,11 +160,51 @@ RSpec.describe RSpec::Sunspot::Profiles do
       described_class.apply_to(first_metadata)
       described_class.apply_to(second_metadata)
 
-      expect(FactoryBot).to have_received(:create).twice
+      expect(FactoryBot).to have_received(:create).once
+      expect(first_metadata[:sunspot_profile_data]).to eq(
+        "records" => [{ "class" => "Individual", "id" => 10 }]
+      )
       expect(second_metadata[:sunspot_profile_data]).to eq(
-        "records" => [{ "class" => "Individual", "id" => 11 }]
+        "records" => [{ "class" => "Individual", "id" => 10 }]
       )
       expect(second_metadata.dig(:sunspot_profile_results, "minimal", "type")).to eq("executable")
+    end
+
+    it "caches profile results even when no records are indexed" do
+      call_count = 0
+
+      described_class.define(:empty) do
+        call_count += 1
+      end
+
+      described_class.apply_to(sunspot_profile: :empty)
+      described_class.apply_to(sunspot_profile: :empty)
+
+      expect(call_count).to eq(1)
+    end
+
+    it "caches each profile independently" do
+      stub_sunspot
+      stub_const("Article", Struct.new(:id))
+      stub_const("Comment", Struct.new(:id))
+      article_calls = 0
+      comment_calls = 0
+
+      described_class.define(:articles) do
+        article_calls += 1
+        Sunspot.index(Article.new(article_calls))
+      end
+
+      described_class.define(:comments) do
+        comment_calls += 1
+        Sunspot.index(Comment.new(comment_calls))
+      end
+
+      described_class.apply_to(sunspot_profiles: %i[articles comments])
+      described_class.apply_to(sunspot_profiles: %i[articles comments])
+
+      expect(article_calls).to eq(1)
+      expect(comment_calls).to eq(1)
     end
 
     it "raises when an example references an unknown profile" do

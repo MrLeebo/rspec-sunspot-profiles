@@ -20,6 +20,19 @@ module RSpec
           @results_key = :sunspot_profile_results
           @names_key = :sunspot_profile_names
           @profiles = {}
+          @profile_cache = {}
+        end
+
+        def profile_cached?(name)
+          @profile_cache.key?(name.to_s)
+        end
+
+        def cached_profile_data(name)
+          @profile_cache[name.to_s]
+        end
+
+        def cache_profile_data(name, data)
+          @profile_cache[name.to_s] = data
         end
 
         def define(name, &block)

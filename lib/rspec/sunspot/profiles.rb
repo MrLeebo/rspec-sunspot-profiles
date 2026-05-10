@@ -88,7 +88,10 @@ module RSpec
         private
 
         def fetch_profile(profile)
-          IndexCapture.new.evaluate(&profile.block)
+          unless configuration.profile_cached?(profile.name)
+            configuration.cache_profile_data(profile.name, IndexCapture.new.evaluate(&profile.block))
+          end
+          configuration.cached_profile_data(profile.name)
         end
 
         def requested_profile_names(metadata)
