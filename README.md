@@ -6,7 +6,6 @@ Use it when:
 
 - many examples need the same indexed records
 - search setup is making specs noisy
-- you want profile data available from example metadata/helpers
 
 ## Installation
 
@@ -102,14 +101,6 @@ RSpec.describe "Search with multiple profiles", sunspot_profiles: %i[minimal ful
   end
 end
 ```
-
-## Metadata helpers
-
-In examples where profiles are applied, these helpers are available:
-
-- `sunspot_profile_names` → ordered applied profile names
-- `sunspot_profile_data` → merged profile payload
-- `sunspot_profile_results` → per-profile captured results
 
 ## Configuration
 
