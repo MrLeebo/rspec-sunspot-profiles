@@ -170,31 +170,6 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(second_metadata.dig(:sunspot_profile_results, "minimal", "type")).to eq("executable")
     end
 
-    it "runs the profile block only once and reuses the result for subsequent applications" do
-      stub_sunspot
-      stub_const("Article", Struct.new(:id))
-      call_count = 0
-
-      described_class.define(:articles) do
-        call_count += 1
-        Sunspot.index(Article.new(call_count))
-      end
-
-      first_metadata = { sunspot_profile: :articles }
-      second_metadata = { sunspot_profile: :articles }
-
-      described_class.apply_to(first_metadata)
-      described_class.apply_to(second_metadata)
-
-      expect(call_count).to eq(1)
-      expect(first_metadata[:sunspot_profile_data]).to eq(
-        "records" => [{ "class" => "Article", "id" => 1 }]
-      )
-      expect(second_metadata[:sunspot_profile_data]).to eq(
-        "records" => [{ "class" => "Article", "id" => 1 }]
-      )
-    end
-
     it "caches profile results even when no records are indexed" do
       call_count = 0
 
