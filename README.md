@@ -4,10 +4,10 @@
 
 The gem is designed to keep search-oriented specs readable and repeatable:
 
-- define reusable static payloads once
+- define reusable executable setup profiles once
 - attach one or more profiles to an example with RSpec metadata
 - access the merged profile data from example metadata or helper methods
-- run executable setup blocks when a profile needs live indexing side effects
+- run profile setup blocks when a profile needs live indexing side effects
 
 ## Installation
 
@@ -70,22 +70,6 @@ profile :minimal do
 end
 ```
 
-Use executable profiles when the setup needs to run for the current example. Use static payload profiles when the fixture data is already known and can be declared directly:
-
-```ruby
-RSpec::Sunspot::Profiles.define(
-  :articles,
-  data: {
-    records: [
-      { id: 1, title: "First article" }
-    ],
-    search: {
-      commit: true
-    }
-  }
-)
-```
-
 Apply a profile in example metadata:
 
 ```ruby
@@ -109,8 +93,8 @@ end
 Applied examples expose:
 
 - `sunspot_profile_names` — the ordered list of applied profile names
-- `sunspot_profile_data` — the merged normalized payload from all applied profiles
-- `sunspot_profile_results` — per-profile metadata including the profile type and normalized data
+- `sunspot_profile_data` — the merged payload from all applied profiles
+- `sunspot_profile_results` — per-profile metadata including profile type and captured data
 
 ## Configuration
 

@@ -4,9 +4,9 @@ This Rails app demonstrates how to use `rspec-sunspot-profiles` through a local 
 
 ## What it covers
 
-- static profiles loaded from `spec/data_profiles`
+- executable profiles loaded from `spec/data_profiles`
 - merged metadata access through `sunspot_profile_names`, `sunspot_profile_data`, and `sunspot_profile_results`
-- a larger static teaching catalog fixture for search-oriented examples
+- a larger executable teaching catalog setup for search-oriented examples
 
 ## Run the example suite
 
@@ -20,5 +20,5 @@ bundle exec rspec
 ## Files to look at
 
 - `spec/support/rspec_sunspot_profiles.rb` — gem configuration for the example app
-- `spec/data_profiles/teaching_taxonomy.rb` — sample static profiles
+- `spec/data_profiles/teaching_taxonomy.rb` — sample executable profiles
 - `spec/sunspot/profile_metadata_spec.rb` — metadata usage examples
