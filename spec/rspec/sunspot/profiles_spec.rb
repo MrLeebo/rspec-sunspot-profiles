@@ -271,10 +271,10 @@ RSpec.describe RSpec::Sunspot::Profiles do
     end
 
     it "raises when the same profile name is registered twice" do
-      described_class.define(:articles) {}
+      described_class.define(:articles) { nil }
 
       expect do
-        described_class.define(:articles) {}
+        described_class.define(:articles) { nil }
       end.to raise_error(RSpec::Sunspot::Profiles::Error, "sunspot profile already registered: articles")
     end
 
