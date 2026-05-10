@@ -40,9 +40,7 @@ RSpec::Sunspot::Profiles.configure do |config|
 end
 ```
 
-## Example suite
-
-The snippets below all belong to the same test suite and use the same Sunspot models and profiles.
+## Usage
 
 ### 1) Search models
 
