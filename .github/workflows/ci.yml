@@ -19,6 +19,7 @@ jobs:
         ruby-version:
           - "3.2"
           - "3.3"
+          - "3.4"
 
     steps:
       - name: Check out repository

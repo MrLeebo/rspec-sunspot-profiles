@@ -24,8 +24,8 @@ module RSpec
           install!
         end
 
-        def define(name, &)
-          configuration.define(name, &)
+        def define(name, shared: false, &)
+          configuration.define(name, shared: shared, &)
         end
 
         alias register define
@@ -88,7 +88,14 @@ module RSpec
         private
 
         def fetch_profile(profile)
-          IndexCapture.new.evaluate(&profile.block)
+          if profile.shared?
+            unless configuration.profile_cached?(profile.name)
+              configuration.cache_profile_data(profile.name, IndexCapture.new.evaluate(&profile.block))
+            end
+            configuration.cached_profile_data(profile.name)
+          else
+            IndexCapture.new.evaluate(&profile.block)
+          end
         end
 
         def requested_profile_names(metadata)

@@ -166,6 +166,68 @@ RSpec.describe RSpec::Sunspot::Profiles do
       expect(second_metadata.dig(:sunspot_profile_results, "minimal", "type")).to eq("executable")
     end
 
+    it "runs a shared profile block only once and reuses the result for subsequent applications" do
+      stub_sunspot
+      stub_const("Article", Struct.new(:id))
+      call_count = 0
+
+      described_class.define(:articles, shared: true) do
+        call_count += 1
+        Sunspot.index(Article.new(call_count))
+      end
+
+      first_metadata = { sunspot_profile: :articles }
+      second_metadata = { sunspot_profile: :articles }
+
+      described_class.apply_to(first_metadata)
+      described_class.apply_to(second_metadata)
+
+      expect(call_count).to eq(1)
+      expect(first_metadata[:sunspot_profile_data]).to eq(
+        "records" => [{ "class" => "Article", "id" => 1 }]
+      )
+      expect(second_metadata[:sunspot_profile_data]).to eq(
+        "records" => [{ "class" => "Article", "id" => 1 }]
+      )
+    end
+
+    it "caches shared profile results even when no records are indexed" do
+      call_count = 0
+
+      described_class.define(:empty, shared: true) do
+        call_count += 1
+      end
+
+      described_class.apply_to(sunspot_profile: :empty)
+      described_class.apply_to(sunspot_profile: :empty)
+
+      expect(call_count).to eq(1)
+    end
+
+    it "does not share cache between shared and non-shared profiles of different names" do
+      stub_sunspot
+      stub_const("Article", Struct.new(:id))
+      stub_const("Comment", Struct.new(:id))
+      article_calls = 0
+      comment_calls = 0
+
+      described_class.define(:articles, shared: true) do
+        article_calls += 1
+        Sunspot.index(Article.new(article_calls))
+      end
+
+      described_class.define(:comments) do
+        comment_calls += 1
+        Sunspot.index(Comment.new(comment_calls))
+      end
+
+      described_class.apply_to(sunspot_profiles: %i[articles comments])
+      described_class.apply_to(sunspot_profiles: %i[articles comments])
+
+      expect(article_calls).to eq(1)
+      expect(comment_calls).to eq(2)
+    end
+
     it "raises when an example references an unknown profile" do
       expect do
         described_class.apply_to(sunspot_profile: :missing)

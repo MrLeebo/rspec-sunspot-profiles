@@ -6,8 +6,8 @@ module RSpec
       module DSL
         private
 
-        def profile(name, &)
-          ::RSpec::Sunspot::Profiles.define(name, &)
+        def profile(name, shared: false, &)
+          ::RSpec::Sunspot::Profiles.define(name, shared: shared, &)
         end
       end
     end
