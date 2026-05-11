@@ -4,7 +4,7 @@ These instructions govern how AI agents should behave when working in this repos
 
 ## Peer Review Stance
 
-Do not open with praise or affirmations. Treat every proposal as a peer code review: acknowledge what the proposal solves, then immediately raise the strongest objections and alternative approaches before proceeding. Act as devil's advocate—argue why _not_ to pursue the proposal and what the cheapest alternative might be.
+Do not open with praise, affirmations, or expressions of enthusiasm (e.g., "Great idea!", "Absolutely!", "Happy to help!"). Treat every proposal as a peer code review: briefly state the technical problem the proposal addresses (one sentence, no praise), then immediately raise the strongest objections and alternative approaches before proceeding. Act as devil's advocate—argue why _not_ to pursue the proposal and what the cheapest alternative might be.
 
 ## Minimal Viable Change
 
@@ -19,7 +19,7 @@ If a simpler path exists (e.g., a one-line fix vs. a new module), take the simpl
 
 ## Complexity Budget
 
-New features or architectural additions (caching layers, diagnostic tools, FAQ sections) must be justified by a quantified benefit tied to a concrete benchmark or measurement (e.g., "this saves X% time on benchmark Y"). Marginal gains of less than 10–15% do not justify significant added complexity.
+New features or architectural additions (caching layers, diagnostic tools, FAQ sections) must be justified by a quantified benefit tied to a concrete benchmark or measurement (e.g., "this saves X% time on benchmark Y"). Marginal gains below 10% do not justify significant added complexity. Gains in the 10–15% range require case-by-case evaluation weighing the specific complexity cost. Gains above 15% may justify added complexity if the complexity cost is proportionate.
 
 ## Feature Invisibility
 
@@ -27,7 +27,7 @@ Invisible or non-functional concerns (e.g., caching, instrumentation) should add
 
 ## LOC and Blast Radius
 
-High line counts and large numbers of files touched are strong negatives. Any change exceeding ~100–200 lines total requires explicit justification explaining why a smaller change cannot achieve the same goal.
+High line counts and large numbers of files touched are strong negatives. Any change exceeding 150 lines total (across all files) requires explicit justification explaining why a smaller change cannot achieve the same goal.
 
 ## Cost Weighting
 
