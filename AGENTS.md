@@ -51,6 +51,43 @@ Before finalizing any non-trivial change, run the relevant benchmarks or profili
 
 If no benchmark applies, state explicitly that the change has no measurable performance impact and justify it on other grounds (correctness, maintainability, etc.).
 
+## Tooling
+
+Run these commands from the repository root before and after any code change:
+
+- **Tests:** `bundle exec rspec`
+- **Lint:** `bundle exec rubocop`
+
+Do not claim a change is correct without having run both successfully. If either fails on the pre-change baseline, note the pre-existing failures and do not treat them as regressions you caused.
+
+## YAGNI — No Speculative Abstractions
+
+Do not add extension points, base classes, hook systems, or "future-proofing" scaffolding that nothing currently needs. Minimal viable change covers scope; this covers forward-looking over-engineering that nominally fits within scope but adds dead weight. If the justification for a design decision is "we might need this later," remove it.
+
+## Dependency Hygiene
+
+Do not add new gems without explicit direction. Prefer Ruby stdlib or gems already present in the `Gemfile`. Adding a new runtime dependency to a gem widens its transitive dependency footprint for all consumers and carries a 5–10× cost penalty. When a new gem is unavoidable, verify it has no known vulnerabilities before proposing it.
+
+## Public API Stability
+
+Treat the gem's public interface (method signatures, public constants, module structure) as high-cost to change. Do not rename public methods, remove them, change their parameter lists, or rename public constants without explicit direction. Breaking changes to the public API require a version bump and a changelog entry.
+
+## Clarify Before Acting on Ambiguity
+
+If a requirement is genuinely ambiguous — multiple valid interpretations exist, or the correct behavior is unclear — stop and ask rather than picking an interpretation and implementing it. Wrong-direction work is expensive to undo. State the ambiguity explicitly: "This could mean X or Y; which do you want?"
+
+## Commit Hygiene
+
+- One logical change per commit. Do not bundle formatting fixes, refactoring, and feature work in a single commit.
+- Write commit messages in the imperative mood: "Fix X", not "Fixed X" or "Fixing X".
+- Do not include `[skip ci]` or similar flags without explicit instruction.
+
+## Security Baseline
+
+- Never commit credentials, API keys, tokens, or secrets.
+- Do not introduce `eval`, shell injection risks, or patterns that bypass existing security boundaries.
+- Do not add code that writes user-controlled input to the filesystem or executes it without sanitization.
+
 ## Scoring Output
 
 Include a visible scoring summary in every proposal using this format:
